@@ -218,14 +218,13 @@ func buildMux(opts *options, hashes map[string][]byte) (*http.ServeMux, error) {
 			dir.Name, prefix, dir.OsPath, dir.AllowedUsers,
 		)
 
-		// Register both the slash-terminated prefix and the bare prefix so
-		// that WebDAV clients which PROPFIND the root without a trailing slash
-		// are handled correctly.
+		// Registering a pattern ending in "/" causes http.ServeMux to
+		// automatically redirect the bare path (without trailing slash) to
+		// the slash-terminated form with a 301. This is correct WebDAV
+		// semantics for collections and avoids the webdav "prefix mismatch"
+		// error that occurs when the handler receives a path that doesn't
+		// match its configured Prefix exactly.
 		mux.Handle(prefix, auth)
-		bare := strings.TrimSuffix(prefix, "/")
-		if bare != "" {
-			mux.Handle(bare, auth)
-		}
 	}
 
 	return mux, nil
