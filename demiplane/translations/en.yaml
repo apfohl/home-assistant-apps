@@ -1,0 +1,21 @@
+configuration:
+  server_port:
+    name: Server Port
+    description: >-
+      The TCP port the WebDAV server listens on inside the container.
+      The default is 8080. Map this port to the host in the add-on network settings
+      and point your reverse proxy (e.g., nginx-proxy-manager) at it.
+  users:
+    name: Users
+    description: >-
+      List of users that can authenticate against the WebDAV server.
+      Each user needs a username and a password. Passwords are bcrypt-hashed
+      in memory at startup and are never stored in plaintext by the server.
+  directories:
+    name: Directories
+    description: >-
+      WebDAV directory shares. Each entry defines a URL prefix, the backing
+      OS path inside the container, and an optional list of usernames that
+      are allowed to access it. Leave allowed_users empty to grant access
+      to all authenticated users.
+      Available container paths: /share/..., /media/..., /ssl/..., /config/...

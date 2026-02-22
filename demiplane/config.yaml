@@ -1,0 +1,43 @@
+name: "Demiplane WebDAV"
+version: "1.0.0"
+slug: "demiplane"
+description: "Lightweight WebDAV server with multi-user basic auth and per-directory access control"
+url: "https://codeberg.org/apfohl/home-assistant-apps/src/branch/main/demiplane"
+arch:
+  - aarch64
+  - amd64
+init: false
+startup: services
+ports:
+  8080/tcp: 8080
+ports_description:
+  8080/tcp: "WebDAV server port"
+map:
+  - type: share
+    read_only: false
+  - type: media
+    read_only: false
+  - type: ssl
+  - type: addon_config
+    read_only: false
+options:
+  server_port: 8080
+  users:
+    - username: "admin"
+      password: "changeme"
+  directories:
+    - name: "Shared Files"
+      prefix: "/files/shared"
+      os_path: "/share/webdav"
+      allowed_users: []
+schema:
+  server_port: "port"
+  users:
+    - username: "str"
+      password: "password"
+  directories:
+    - name: "str"
+      prefix: "str"
+      os_path: "str"
+      allowed_users:
+        - "str?"
