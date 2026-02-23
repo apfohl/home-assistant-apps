@@ -92,6 +92,8 @@ directories:
 
 ## Exposing via nginx-proxy-manager
 
+### Basic setup
+
 1. Start the add-on and note the host port (default `8080`).
 2. In nginx-proxy-manager, create a new **Proxy Host**:
    - **Domain names**: your public domain, e.g. `dav.example.com`
@@ -99,8 +101,50 @@ directories:
    - **Forward hostname / IP**: the IP address of your Home Assistant instance
    - **Forward port**: the host port mapped above (e.g. `8080`)
    - Enable **SSL** on the SSL tab and request a Let's Encrypt certificate
-3. WebDAV clients connect to `https://dav.example.com/files/docs` (or
+3. On the **Advanced** tab of the proxy host, paste the following:
+
+   ```nginx
+   proxy_read_timeout 3600s;
+   proxy_send_timeout 3600s;
+   proxy_connect_timeout 75s;
+   proxy_request_buffering off;
+   client_max_body_size 0;
+   ```
+
+4. WebDAV clients connect to `https://dav.example.com/files/docs` (or
    whichever prefix you configured) with their username and password.
+
+### Required: fix for large file uploads
+
+By default, nginx-proxy-manager will abort uploads larger than a few hundred
+megabytes after approximately 60 seconds. This is caused by nginx's
+`client_body_timeout` directive, which controls how long nginx waits between
+successive data chunks from the uploading client. Its default is 60 seconds and
+it is only effective at the `http {}` config level — **the NPM Advanced tab
+injects config inside a `location {}` block, so setting `client_body_timeout`
+there has no effect**.
+
+NPM provides a custom config file mechanism to inject settings at the correct
+level. On your Home Assistant instance, open the **Terminal** add-on and run:
+
+```sh
+mkdir -p /root/addon_configs/a0d7b954_nginxproxymanager/nginx/custom
+echo 'client_body_timeout 3600s;' \
+  > /root/addon_configs/a0d7b954_nginxproxymanager/nginx/custom/http.conf
+```
+
+Then restart the nginx-proxy-manager add-on from the HA UI.
+
+This file is included by NPM at the end of its main `http {}` block, which is
+the correct nginx scope for this directive. Without it, transfers of large files
+(roughly anything that takes more than 60 seconds to upload) will fail with
+macOS Finder error -36 or a similar I/O error on other clients.
+
+> **Note:** This is a known limitation of nginx-proxy-manager that affects any
+> service handling large uploads (Nextcloud, WebDAV servers, etc.). The custom
+> `http.conf` file is the officially documented NPM workaround. See
+> [NPM advanced configuration](https://nginxproxymanager.com/advanced-config/)
+> for the full list of supported custom config file locations.
 
 ## WebDAV client compatibility
 
