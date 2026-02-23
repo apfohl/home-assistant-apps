@@ -3,7 +3,7 @@ configuration:
     name: Server Port
     description: >-
       The TCP port the WebDAV server listens on inside the container.
-      The default is 8080. Map this port to the host in the add-on network settings
+      The default is 8080. Map this port to the host in the app network settings
       and point your reverse proxy (e.g., nginx-proxy-manager) at it.
   users:
     name: Users

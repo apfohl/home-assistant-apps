@@ -1,0 +1,45 @@
+#include <tunables/global>
+
+profile demiplane flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # Capabilities
+  file,
+  signal (send) set=(kill,term,int,hup,cont),
+
+  # S6-Overlay
+  /init ix,
+  /bin/** ix,
+  /usr/bin/** ix,
+  /run/{s6,s6-rc*,service}/** ix,
+  /package/** ix,
+  /command/** ix,
+  /etc/services.d/** rwix,
+  /etc/cont-init.d/** rwix,
+  /etc/cont-finish.d/** rwix,
+  /run/{,**} rwk,
+  /dev/tty rw,
+
+  # Bashio
+  /usr/lib/bashio/** ix,
+  /tmp/** rwk,
+
+  # Demiplane binary
+  /usr/bin/demiplane ix,
+
+  # App options (options.json)
+  /data/** rw,
+
+  # Mapped HA volumes served over WebDAV
+  /share/** rw,
+  /media/** rw,
+  /ssl/** r,
+  /config/** rw,
+
+  # Go runtime needs /proc
+  @{PROC}/sys/net/core/somaxconn r,
+  @{PROC}/@{pid}/net/if_inet6 r,
+
+  # Network: listen on configured port
+  network tcp,
+}

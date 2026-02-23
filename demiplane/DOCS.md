@@ -1,6 +1,6 @@
-# Home Assistant Add-on: Demiplane WebDAV
+# Home Assistant App: Demiplane WebDAV
 
-A lightweight WebDAV server that integrates with the Home Assistant OS add-on
+A lightweight WebDAV server that integrates with the Home Assistant OS app
 ecosystem. It provides authenticated, multi-user WebDAV access to directories
 on your Home Assistant instance and is designed to be exposed publicly via a
 reverse proxy such as nginx-proxy-manager.
@@ -13,18 +13,18 @@ reverse proxy such as nginx-proxy-manager.
 - Multiple WebDAV directories, each with a configurable URL prefix, backing OS
   path, and optional per-directory user access control list
 - Access to the Home Assistant `/share`, `/media`, `/ssl`, and `/config`
-  (add-on config) directories
+  (app config) directories
 - Plain HTTP — TLS termination is handled by your reverse proxy
 
 ## Configuration
 
-All configuration is done through the Home Assistant add-on options UI.
+All configuration is done through the Home Assistant app options UI.
 
 ### `server_port`
 
 The TCP port the WebDAV server listens on inside the container. Default: `8080`.
 
-You must also map this port on the **Network** tab of the add-on so that it is
+You must also map this port on the **Network** tab of the app so that it is
 reachable from the host. Use this host port as the upstream address in
 nginx-proxy-manager.
 
@@ -65,7 +65,7 @@ Available base paths inside the container:
 | `/share/`  | HA shared directory            |
 | `/media/`  | HA media directory             |
 | `/ssl/`    | HA SSL certificates (read-only by default) |
-| `/config/` | This add-on's config directory |
+| `/config/` | This app's config directory |
 
 Example:
 
@@ -94,7 +94,7 @@ directories:
 
 ### Basic setup
 
-1. Start the add-on and note the host port (default `8080`).
+1. Start the app and note the host port (default `8080`).
 2. In nginx-proxy-manager, create a new **Proxy Host**:
    - **Domain names**: your public domain, e.g. `dav.example.com`
    - **Scheme**: `http`
@@ -125,7 +125,7 @@ injects config inside a `location {}` block, so setting `client_body_timeout`
 there has no effect**.
 
 NPM provides a custom config file mechanism to inject settings at the correct
-level. On your Home Assistant instance, open the **Terminal** add-on and run:
+level. On your Home Assistant instance, open the **Terminal** app and run:
 
 ```sh
 mkdir -p /root/addon_configs/a0d7b954_nginxproxymanager/nginx/custom
@@ -133,7 +133,7 @@ echo 'client_body_timeout 3600s;' \
   > /root/addon_configs/a0d7b954_nginxproxymanager/nginx/custom/http.conf
 ```
 
-Then restart the nginx-proxy-manager add-on from the HA UI.
+Then restart the nginx-proxy-manager app from the HA UI.
 
 This file is included by NPM at the end of its main `http {}` block, which is
 the correct nginx scope for this directive. Without it, transfers of large files
@@ -157,7 +157,7 @@ Most operating systems and applications support WebDAV natively:
 
 ## Advanced: generating a bcrypt hash manually
 
-The add-on binary includes a helper sub-command for generating bcrypt hashes
+The app binary includes a helper sub-command for generating bcrypt hashes
 outside of the HA UI (useful for scripting or debugging):
 
 ```sh

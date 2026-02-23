@@ -1,8 +1,8 @@
 # Home Assistant Apps Repository
 
-Home Assistant add-on repository providing a lightweight WebDAV server.
+Home Assistant app repository providing a lightweight WebDAV server.
 
-## Add-ons
+## Apps
 
 ### [Demiplane WebDAV](./demiplane)
 
@@ -18,7 +18,7 @@ Designed to be exposed publicly via a reverse proxy such as nginx-proxy-manager.
 
 Add this repository to your Home Assistant instance:
 
-1. Go to **Settings** → **Add-ons** → **Add-on Store**
+1. Go to **Settings** → **Apps** → **App Store**
 2. Click the three-dot menu in the top right and select **Repositories**
 3. Add `https://codeberg.org/apfohl/home-assistant-apps` and click **Add**
 

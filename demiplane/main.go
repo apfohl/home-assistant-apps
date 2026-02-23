@@ -1,7 +1,7 @@
 // Demiplane — a WebDAV server for Home Assistant.
 //
 // Configuration is read from /data/options.json (the standard Home Assistant
-// add-on options file). Multiple users and multiple directories with
+// app options file). Multiple users and multiple directories with
 // per-directory access-control lists are supported.
 //
 // Passwords are supplied as plaintext in the HA options UI; they are bcrypt-
@@ -259,10 +259,10 @@ func main() {
 	}
 
 	if len(opts.Users) == 0 {
-		log.Fatal("no users configured; add at least one user in the add-on options")
+		log.Fatal("no users configured; add at least one user in the app options")
 	}
 	if len(opts.Directories) == 0 {
-		log.Fatal("no directories configured; add at least one directory in the add-on options")
+		log.Fatal("no directories configured; add at least one directory in the app options")
 	}
 
 	log.Printf("hashing passwords for %d user(s)...", len(opts.Users))
