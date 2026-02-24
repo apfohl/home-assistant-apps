@@ -1,0 +1,49 @@
+configuration:
+  cron_expression:
+    name: Cron Schedule
+    description: >-
+      Standard 5-field cron expression controlling when backups run.
+      Examples: "0 3 * * *" (daily at 03:00), "0 */6 * * *" (every 6 hours).
+  backup_base_path:
+    name: Backup Base Path
+    description: >-
+      Root directory for incremental IMAP sync data. Each account gets a
+      subdirectory named after its sanitized username (e.g. user_at_example_com).
+      Must be inside /share so the data persists across app restarts.
+  archive_path:
+    name: Archive Path
+    description: >-
+      Directory where compressed tar.gz archives are stored for long-term
+      retention. Must be inside /share.
+  retention_days:
+    name: Retention Days
+    description: >-
+      Number of days to keep archives. Archives older than this value are
+      deleted automatically after each backup run.
+  accounts:
+    name: IMAP Accounts
+    description: >-
+      List of IMAP accounts to back up. Each account is synced independently;
+      a failure on one account does not prevent others from running.
+  username:
+    name: Username
+    description: >-
+      IMAP username, usually the full email address (e.g. user@example.com).
+  password:
+    name: Password
+    description: >-
+      IMAP account password. Stored in the HA options file; handle accordingly.
+  server:
+    name: IMAP Server
+    description: >-
+      Hostname of the IMAP server (e.g. mail.example.com or imap.gmail.com).
+  mirror_mode:
+    name: Mirror Mode
+    description: >-
+      When enabled, the local mail store mirrors the remote server exactly —
+      messages deleted on the server are also deleted locally.
+  multi_fetch_size:
+    name: Multi-Fetch Size
+    description: >-
+      Number of messages to fetch in a single IMAP request. Reduce to 1 for
+      servers with strict rate limits.

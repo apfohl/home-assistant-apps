@@ -1,0 +1,53 @@
+#include <tunables/global>
+
+profile chronicle flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+
+  # Capabilities
+  file,
+  signal (send) set=(kill,term,int,hup,cont),
+
+  # S6-Overlay
+  /init ix,
+  /bin/** ix,
+  /usr/bin/** ix,
+  /run/{s6,s6-rc*,service}/** ix,
+  /package/** ix,
+  /command/** ix,
+  /etc/services.d/** rwix,
+  /etc/cont-init.d/** rwix,
+  /etc/cont-finish.d/** rwix,
+  /run/{,**} rwk,
+  /dev/tty rw,
+
+  # Bashio
+  /usr/lib/bashio/** ix,
+  /tmp/** rwk,
+
+  # Chronicle binary
+  /usr/bin/chronicle ix,
+
+  # App options (options.json)
+  /data/** rw,
+
+  # Ruby runtime and imap-backup gem
+  /usr/bin/ruby* ix,
+  /usr/lib/ruby/** mr,
+  /usr/local/bundle/** mr,
+  /var/lib/gems/** mr,
+  /usr/local/bin/imap-backup ix,
+  /usr/bin/imap-backup ix,
+
+  # Gem executables may live under various paths
+  /usr/local/lib/ruby/** mr,
+
+  # imap-backup reads/writes mail data under /share
+  /share/** rw,
+
+  # Go runtime needs /proc
+  @{PROC}/sys/net/core/somaxconn r,
+  @{PROC}/@{pid}/net/if_inet6 r,
+
+  # Outbound IMAP connections (TCP — no listen required)
+  network tcp,
+}

@@ -1,0 +1,36 @@
+name: "Chronicle IMAP Backup"
+version: "1.0.0"
+slug: "chronicle"
+description: "Scheduled IMAP backup with long-term tar.gz archive storage and configurable retention"
+url: "https://codeberg.org/apfohl/home-assistant-apps/src/branch/main/chronicle"
+arch:
+  - aarch64
+  - amd64
+init: false
+startup: services
+apparmor: true
+map:
+  - type: share
+    read_only: false
+options:
+  cron_expression: "0 3 * * *"
+  backup_base_path: "/share/chronicle/data"
+  archive_path: "/share/chronicle/archives"
+  retention_days: 5
+  accounts:
+    - username: "user@example.com"
+      password: "changeme"
+      server: "mail.example.com"
+      mirror_mode: true
+      multi_fetch_size: 1
+schema:
+  cron_expression: "str"
+  backup_base_path: "str"
+  archive_path: "str"
+  retention_days: "int"
+  accounts:
+    - username: "str"
+      password: "password"
+      server: "str"
+      mirror_mode: "bool"
+      multi_fetch_size: "int"

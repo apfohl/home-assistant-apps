@@ -1,2 +1,6 @@
-# compiled binary (produced locally by go build)
+# compiled binaries (produced locally by go build)
 demiplane/demiplane
+chronicle/chronicle
+
+# IDEs
+.idea

@@ -1,6 +1,7 @@
 # Home Assistant Apps Repository
 
-Home Assistant app repository providing a lightweight WebDAV server.
+Home Assistant app repository providing a lightweight WebDAV server and a
+scheduled IMAP backup tool.
 
 ## Apps
 
@@ -13,6 +14,17 @@ Designed to be exposed publicly via a reverse proxy such as nginx-proxy-manager.
 - Per-directory access control lists
 - Access to Home Assistant shared and media directories
 - HTTP server suitable for TLS termination by a reverse proxy
+
+### [Chronicle IMAP Backup](./chronicle)
+
+A scheduled IMAP backup app that syncs mail accounts and creates long-term
+compressed archives with configurable retention.
+
+- Scheduled IMAP sync via a standard cron expression
+- Multiple independent accounts, each isolated from failures in others
+- Compressed tar.gz archives created after each successful sync
+- Retention-based archive pruning
+- Pure-Go scheduler — no shell scripts or external cron daemon
 
 ## Installation
 
