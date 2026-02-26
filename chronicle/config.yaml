@@ -1,5 +1,5 @@
 name: "Chronicle IMAP Backup"
-version: "1.0.0"
+version: "1.1.0"
 slug: "chronicle"
 description: "Scheduled IMAP backup with long-term tar.gz archive storage and configurable retention"
 url: "https://codeberg.org/apfohl/home-assistant-apps/src/branch/main/chronicle"
@@ -17,6 +17,7 @@ options:
   backup_base_path: "/share/chronicle/data"
   archive_path: "/share/chronicle/archives"
   retention_days: 5
+  verbose: false
   accounts:
     - username: "user@example.com"
       password: "changeme"
@@ -28,6 +29,7 @@ schema:
   backup_base_path: "str"
   archive_path: "str"
   retention_days: "int"
+  verbose: "bool"
   accounts:
     - username: "str"
       password: "password"

@@ -50,6 +50,7 @@ type options struct {
 	BackupBasePath string       `json:"backup_base_path"`
 	ArchivePath    string       `json:"archive_path"`
 	RetentionDays  int          `json:"retention_days"`
+	Verbose        bool         `json:"verbose"`
 	Accounts       []accountOpt `json:"accounts"`
 }
 
@@ -194,8 +195,13 @@ func writeImapConfig(acc accountOpt, syncPath string) (string, error) {
 
 // runImapBackup invokes the imap-backup CLI for a single account.
 // It streams stdout/stderr to the Go logger, so the output appears in HA logs.
-func runImapBackup(acc accountOpt, configPath string) error {
-	cmd := exec.Command("imap-backup", "backup", "--config", configPath)
+func runImapBackup(acc accountOpt, configPath string, verbose bool) error {
+	args := []string{"backup", "--config", configPath}
+	if verbose {
+		args = append(args, "-v")
+	}
+
+	cmd := exec.Command("imap-backup", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -380,7 +386,7 @@ func backupAccount(acc accountOpt, opts *options) {
 	}()
 
 	// Run imap-backup.
-	if err = runImapBackup(acc, cfgPath); err != nil {
+	if err = runImapBackup(acc, cfgPath, opts.Verbose); err != nil {
 		log.Printf("[%s] imap-backup failed: %v — skipping archive", acc.Username, err)
 		return
 	}

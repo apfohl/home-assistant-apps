@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.0
+
+- Added `verbose` option: when enabled, passes `-v` to the `imap-backup backup` command for detailed debug output in the add-on logs
+
 ## 1.0.0
 
 - Initial release

@@ -20,6 +20,11 @@ configuration:
     description: >-
       Number of days to keep archives. Archives older than this value are
       deleted automatically after each backup run.
+  verbose:
+    name: Verbose
+    description: >-
+      When enabled, passes -v to the imap-backup backup command, producing
+      detailed debug output in the add-on logs.
   accounts:
     name: IMAP Accounts
     description: >-
