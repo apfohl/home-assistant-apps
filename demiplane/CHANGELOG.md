@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [1.1.0] - 2026-02-26
+
+- Migrated service management from legacy s6-overlay `services.d` to native s6-rc.d layout
+
 ## [1.0.0] - 2026-02-23
 
 ### Added
