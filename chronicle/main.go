@@ -32,9 +32,11 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -464,8 +466,13 @@ func main() {
 	c.Start()
 	log.Printf("scheduler started; next run at %v", nextRun(c))
 
-	// Block forever — the s6-overlay finish script handles restarts.
-	select {}
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+
+	log.Println("shutting down scheduler...")
+	<-c.Stop().Done()
+	log.Println("scheduler stopped")
 }
 
 // nextRun returns the next scheduled time from the cron scheduler, or a zero
