@@ -1,5 +1,5 @@
 name: "Demiplane WebDAV"
-version: "1.1.1"
+version: "1.1.2"
 slug: "demiplane"
 description: "Lightweight WebDAV server with multi-user basic auth and per-directory access control"
 url: "https://codeberg.org/apfohl/home-assistant-apps/src/branch/main/demiplane"

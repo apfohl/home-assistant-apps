@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.2
+
+- Propagate context cancellation into `runImapBackup` and `backupAccount` via `context.WithCancel`, so that a SIGTERM/SIGINT immediately cancels any in-progress `imap-backup` subprocess
+
+## 1.2.1
+
+- Implemented graceful shutdown: listens for SIGTERM/SIGINT and waits for the running cron job to complete before exiting
+
 ## 1.2.0
 
 - Migrated service management from legacy s6-overlay `services.d` to native s6-rc.d layout

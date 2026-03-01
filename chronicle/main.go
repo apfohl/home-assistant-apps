@@ -24,6 +24,7 @@ package main
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -197,13 +198,13 @@ func writeImapConfig(acc accountOpt, syncPath string) (string, error) {
 
 // runImapBackup invokes the imap-backup CLI for a single account.
 // It streams stdout/stderr to the Go logger, so the output appears in HA logs.
-func runImapBackup(acc accountOpt, configPath string, verbose bool) error {
+func runImapBackup(ctx context.Context, acc accountOpt, configPath string, verbose bool) error {
 	args := []string{"backup", "--config", configPath}
 	if verbose {
 		args = append(args, "-v")
 	}
 
-	cmd := exec.Command("imap-backup", args...)
+	cmd := exec.CommandContext(ctx, "imap-backup", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -364,7 +365,7 @@ func pruneArchives(acc accountOpt, archivePath string, retentionDays int) {
 
 // backupAccount runs the full backup pipeline for a single account:
 // sync → archive → prune. Errors are logged but do not halt the scheduler.
-func backupAccount(acc accountOpt, opts *options) {
+func backupAccount(ctx context.Context, acc accountOpt, opts *options) {
 	syncPath := localPath(opts.BackupBasePath, acc.Username)
 
 	log.Printf("[%s] backup job started", acc.Username)
@@ -388,7 +389,7 @@ func backupAccount(acc accountOpt, opts *options) {
 	}()
 
 	// Run imap-backup.
-	if err = runImapBackup(acc, cfgPath, opts.Verbose); err != nil {
+	if err = runImapBackup(ctx, acc, cfgPath, opts.Verbose); err != nil {
 		log.Printf("[%s] imap-backup failed: %v — skipping archive", acc.Username, err)
 		return
 	}
@@ -416,11 +417,11 @@ func backupAccount(acc accountOpt, opts *options) {
 // ---------------------------------------------------------------------------
 
 // runAllAccounts runs the backup job for every configured account sequentially.
-func runAllAccounts(opts *options) {
+func runAllAccounts(ctx context.Context, opts *options) {
 	log.Printf("scheduled backup run started for %d account(s)", len(opts.Accounts))
 
 	for _, acc := range opts.Accounts {
-		backupAccount(acc, opts)
+		backupAccount(ctx, acc, opts)
 	}
 
 	log.Printf("scheduled backup run finished")
@@ -453,11 +454,13 @@ func main() {
 			acc.Username, acc.Server, localPath(opts.BackupBasePath, acc.Username))
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	// Set up the cron scheduler.
 	c := cron.New()
 
 	_, err = c.AddFunc(opts.CronExpression, func() {
-		runAllAccounts(opts)
+		runAllAccounts(ctx, opts)
 	})
 	if err != nil {
 		log.Fatalf("invalid cron expression %q: %v", opts.CronExpression, err)
@@ -469,6 +472,7 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
+	cancel()
 
 	log.Println("shutting down scheduler...")
 	<-c.Stop().Done()

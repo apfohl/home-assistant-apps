@@ -1,5 +1,15 @@
 ## [Unreleased]
 
+## [1.1.2] - 2026-03-01
+
+- Use `errors.Is` instead of `==` for `http.ErrServerClosed` check (idiomatic Go error comparison)
+- Call `signal.Stop` after receiving the shutdown signal to clean up the signal channel
+- Log shutdown errors with `Printf` instead of `Fatalf` so a drain/timeout error doesn't obscure that shutdown completed
+
+## [1.1.1] - 2026-03-01
+
+- Implemented graceful shutdown: the HTTP server listens for SIGTERM/SIGINT and performs a clean shutdown with a 10-second timeout for in-flight requests
+
 ## [1.1.0] - 2026-02-26
 
 - Migrated service management from legacy s6-overlay `services.d` to native s6-rc.d layout
