@@ -4,6 +4,17 @@ All notable changes to Tavern will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.4] - 2026-03-02
+
+### Fixed
+
+- Dashboard showed stale data when switching back to the Tavern panel from
+  another HA module; the ingress iframe stays alive in the DOM so the page
+  never reloaded automatically — added a `visibilitychange` JS listener that
+  calls `window.location.reload()` whenever the panel becomes visible
+- Added `Cache-Control: no-store` response header so the browser never serves
+  a cached copy of the dashboard
+
 ## [1.1.3] - 2026-03-02
 
 ### Fixed

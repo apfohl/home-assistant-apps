@@ -178,6 +178,7 @@ func main() {
 		}
 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store")
 		if err = tmpl.Execute(w, data); err != nil {
 			log.Printf("template execute error: %v", err)
 		}
