@@ -280,8 +280,12 @@
             <span class="value">{{if .HALastVersion}}{{.HALastVersion}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
         </div>
         <div class="row">
-            <span class="label">State</span>
-            <span class="value ok">{{if .HAState}}{{.HAState}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
+            <span class="label">Update Available</span>
+            {{if .HAUpdateAvailable}}
+            <span class="value warn">&#x26A0; Update available</span>
+            {{else}}
+            <span class="value ok">&#x2714; Up to date</span>
+            {{end}}
         </div>
     </div>
 
@@ -375,7 +379,7 @@
 </div>
 
 <footer>
-    <span>Tavern v1.1.1 &mdash; HA Ingress Test App</span>
+    <span>Tavern v1.1.2 &mdash; HA Ingress Test App</span>
     <span>Generated {{.Timestamp}}</span>
 </footer>
 

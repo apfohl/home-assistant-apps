@@ -40,9 +40,9 @@ type supervisorInfo struct {
 // coreInfo mirrors the relevant fields from GET /core/info
 type coreInfo struct {
 	Data struct {
-		Version     string `json:"version"`
-		LastVersion string `json:"version_latest"`
-		State       string `json:"state"`
+		Version         string `json:"version"`
+		LastVersion     string `json:"version_latest"`
+		UpdateAvailable bool   `json:"update_available"`
 	} `json:"data"`
 }
 
@@ -71,9 +71,9 @@ type pageData struct {
 	SupervisorChannel string
 	Arch              string
 
-	HAVersion     string
-	HALastVersion string
-	HAState       string
+	HAVersion         string
+	HALastVersion     string
+	HAUpdateAvailable bool
 
 	Hostname      string
 	OS            string
@@ -142,7 +142,7 @@ func main() {
 			} else {
 				data.HAVersion = ci.Data.Version
 				data.HALastVersion = ci.Data.LastVersion
-				data.HAState = ci.Data.State
+				data.HAUpdateAvailable = ci.Data.UpdateAvailable
 			}
 
 			// Fetch host info

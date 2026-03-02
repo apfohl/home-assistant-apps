@@ -4,6 +4,14 @@ All notable changes to Tavern will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.2] - 2026-03-02
+
+### Fixed
+
+- HA Core "State" row always showed `—` because `/core/info` has no `state`
+  field; replaced with "Update Available" using the `update_available` boolean,
+  shown as ✔ Up to date (green) or ⚠ Update available (amber)
+
 ## [1.1.1] - 2026-03-02
 
 ### Fixed

@@ -1,5 +1,5 @@
 name: "Tavern"
-version: "1.1.1"
+version: "1.1.2"
 slug: "tavern"
 description: >-
   A small ingress gateway dashboard that displays live Home Assistant system
