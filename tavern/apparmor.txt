@@ -24,25 +24,16 @@ profile tavern flags=(attach_disconnected,mediate_deleted) {
   /usr/lib/bashio/** ix,
   /tmp/** rwk,
 
-  # Access to options.json and other addon data
+  # Tavern binary
+  /usr/bin/tavern ix,
+
+  # Addon data
   /data/** rw,
 
-  # Start new profile for the tavern service
-  /usr/bin/tavern cx -> tavern,
+  # Go runtime needs /proc
+  @{PROC}/sys/net/core/somaxconn r,
+  @{PROC}/@{pid}/net/if_inet6 r,
 
-  profile tavern flags=(attach_disconnected,mediate_deleted) {
-    #include <abstractions/base>
-
-    # Receive signals from S6-Overlay
-    signal (receive) peer=*_tavern,
-
-    # Access to addon data
-    /data/** rw,
-
-    # Service binary
-    /usr/bin/tavern r,
-
-    # Network: accept ingress connections and call supervisor API
-    network tcp,
-  }
+  # Network: accept ingress connections and call supervisor API
+  network tcp,
 }
