@@ -4,6 +4,15 @@ All notable changes to Tavern will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.3] - 2026-03-02
+
+### Fixed
+
+- Dashboard was cut off and not scrollable on small screens inside the HA
+  ingress iframe; removed `min-height: 100vh` (which expanded the body to the
+  full outer viewport) and added `overflow-y: auto` so the panel scrolls
+  correctly when content exceeds the available height
+
 ## [1.1.2] - 2026-03-02
 
 ### Fixed
