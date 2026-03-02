@@ -161,11 +161,11 @@ func main() {
 					data.UptimeHuman = formatUptime(uptimeSecs)
 				}
 
-				// Disk info (values are in MB)
+				// Disk info (values are already in GB)
 				if hi.Data.DiskTotal > 0 {
-					data.DiskTotal = fmt.Sprintf("%.1f GB", hi.Data.DiskTotal/1024)
-					data.DiskUsed = fmt.Sprintf("%.1f GB", hi.Data.DiskUsed/1024)
-					data.DiskFree = fmt.Sprintf("%.1f GB", hi.Data.DiskFree/1024)
+					data.DiskTotal = fmt.Sprintf("%.1f GB", hi.Data.DiskTotal)
+					data.DiskUsed = fmt.Sprintf("%.1f GB", hi.Data.DiskUsed)
+					data.DiskFree = fmt.Sprintf("%.1f GB", hi.Data.DiskFree)
 					data.DiskPct = int(hi.Data.DiskUsed / hi.Data.DiskTotal * 100)
 				}
 			}
