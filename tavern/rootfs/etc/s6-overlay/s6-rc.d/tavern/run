@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start the Tavern ingress dashboard
+# ==============================================================================
+bashio::log.info "Starting Tavern ingress dashboard..."
+exec /usr/bin/tavern

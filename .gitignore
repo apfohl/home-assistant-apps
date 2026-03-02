@@ -1,6 +1,7 @@
 # compiled binaries (produced locally by go build)
 demiplane/demiplane
 chronicle/chronicle
+tavern/tavern
 
 # IDEs
 .idea

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tavern — HA Ingress Dashboard</title>
+    <style>
+        :root {
+            --bg: #1a1625;
+            --surface: #231e33;
+            --border: #3a3255;
+            --accent: #c9a84c;
+            --accent2: #7c5cbf;
+            --text: #e8e0f0;
+            --muted: #8878a8;
+            --ok: #4caf82;
+            --warn: #e07b3a;
+            --error: #e04c4c;
+            --radius: 8px;
+            --font: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font), serif;
+            font-size: 15px;
+            line-height: 1.6;
+            padding: 2rem 1.5rem;
+            min-height: 100vh;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--accent2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.04em;
+        }
+
+        h1 span {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: var(--muted);
+            letter-spacing: 0.02em;
+            margin-top: 2px;
+        }
+
+        .badge {
+            margin-left: auto;
+            background: var(--ok);
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 3px 10px;
+            border-radius: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.2rem 1.4rem;
+        }
+
+        .card-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .row:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            color: var(--muted);
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            margin-right: 1rem;
+        }
+
+        .value {
+            font-family: 'Consolas', 'Fira Mono', monospace;
+            font-size: 0.88rem;
+            text-align: right;
+            word-break: break-all;
+            color: var(--text);
+        }
+
+        .value.highlight {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .value.ok {
+            color: var(--ok);
+        }
+
+        .ingress-path {
+            font-family: 'Consolas', 'Fira Mono', monospace;
+            font-size: 0.88rem;
+            color: var(--accent2);
+            background: rgba(124, 92, 191, 0.12);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .error-banner {
+            background: rgba(224, 76, 76, 0.15);
+            border: 1px solid var(--error);
+            border-radius: var(--radius);
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.25rem;
+            font-size: 0.85rem;
+            color: var(--error);
+        }
+
+        .error-banner strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.78rem;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-icon">🚪</div>
+    <h1>Tavern
+        <span>Home Assistant Ingress Dashboard</span>
+    </h1>
+    <span class="badge">Ingress Active</span>
+</header>
+
+{{if .FetchError}}
+<div class="error-banner">
+    <strong>Supervisor API Error</strong>
+    {{.FetchError}}
+</div>
+{{end}}
+
+<div class="grid">
+
+    <!-- Ingress Gateway Card -->
+    <div class="card">
+        <div class="card-title">Ingress Gateway</div>
+        <div class="row">
+            <span class="label">Status</span>
+            <span class="value ok">&#x2714; Connected</span>
+        </div>
+        <div class="row">
+            <span class="label">Ingress Path</span>
+            <span class="value"><span class="ingress-path">{{.IngressPath}}</span></span>
+        </div>
+        <div class="row">
+            <span class="label">Gateway IP</span>
+            <span class="value">172.30.32.2</span>
+        </div>
+    </div>
+
+    <!-- Authenticated User Card -->
+    <div class="card">
+        <div class="card-title">Authenticated User</div>
+        <div class="row">
+            <span class="label">Display Name</span>
+            <span class="value highlight">{{if .RemoteUserDisplayName}}{{.RemoteUserDisplayName}}{{else}}<em
+                    style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+        <div class="row">
+            <span class="label">Username</span>
+            <span class="value">{{if .RemoteUserName}}{{.RemoteUserName}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+        <div class="row">
+            <span class="label">User ID</span>
+            <span class="value">{{if .RemoteUserID}}{{.RemoteUserID}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+    </div>
+
+    <!-- Home Assistant Core Card -->
+    <div class="card">
+        <div class="card-title">Home Assistant Core</div>
+        <div class="row">
+            <span class="label">Version</span>
+            <span class="value highlight">{{if .HAVersion}}{{.HAVersion}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+        <div class="row">
+            <span class="label">Latest Available</span>
+            <span class="value">{{if .HALastVersion}}{{.HALastVersion}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+        <div class="row">
+            <span class="label">State</span>
+            <span class="value ok">{{if .HAState}}{{.HAState}}{{else}}<em
+                    style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+    </div>
+
+    <!-- Supervisor Card -->
+    <div class="card">
+        <div class="card-title">Supervisor</div>
+        <div class="row">
+            <span class="label">Version</span>
+            <span class="value highlight">{{if .SupervisorVersion}}{{.SupervisorVersion}}{{else}}<em
+                    style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+        <div class="row">
+            <span class="label">Channel</span>
+            <span class="value">{{if .SupervisorChannel}}{{.SupervisorChannel}}{{else}}<em
+                    style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+        <div class="row">
+            <span class="label">Architecture</span>
+            <span class="value">{{if .Arch}}{{.Arch}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+    </div>
+
+    <!-- Host System Card -->
+    <div class="card">
+        <div class="card-title">Host System</div>
+        <div class="row">
+            <span class="label">Hostname</span>
+            <span class="value highlight">{{if .Hostname}}{{.Hostname}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+        <div class="row">
+            <span class="label">Operating System</span>
+            <span class="value">{{if .OS}}{{.OS}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+        <div class="row">
+            <span class="label">Kernel</span>
+            <span class="value">{{if .KernelVersion}}{{.KernelVersion}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+        <div class="row">
+            <span class="label">Uptime</span>
+            <span class="value ok">{{if .UptimeHuman}}{{.UptimeHuman}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
+        </div>
+    </div>
+
+    <!-- Request Headers Card -->
+    <div class="card">
+        <div class="card-title">Ingress Headers Received</div>
+        <div class="row">
+            <span class="label">X-Ingress-Path</span>
+            <span class="value">{{if .IngressPath}}<span class="ingress-path">{{.IngressPath}}</span>{{else}}<em
+                    style="color:var(--muted)">not set</em>{{end}}</span>
+        </div>
+        <div class="row">
+            <span class="label">X-Remote-User-Id</span>
+            <span class="value">{{if .RemoteUserID}}{{.RemoteUserID}}{{else}}<em style="color:var(--muted)">not set</em>{{end}}</span>
+        </div>
+        <div class="row">
+            <span class="label">X-Remote-User-Name</span>
+            <span class="value">{{if .RemoteUserName}}{{.RemoteUserName}}{{else}}<em
+                    style="color:var(--muted)">not set</em>{{end}}</span>
+        </div>
+    </div>
+
+</div>
+
+<footer>
+    <span>Tavern v1.0.0 &mdash; HA Ingress Test App</span>
+    <span>Generated {{.Timestamp}}</span>
+</footer>
+
+</body>
+</html>
