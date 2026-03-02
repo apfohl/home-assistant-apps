@@ -5,8 +5,7 @@ ARG BUILD_ARCH
 
 WORKDIR /build
 
-COPY go.mod go.sum ./
-RUN go mod download
+COPY go.mod ./
 
 COPY main.go dashboard.html ./
 
