@@ -146,6 +146,10 @@
             color: var(--ok);
         }
 
+        .value.warn {
+            color: var(--warn);
+        }
+
         .ingress-path {
             font-family: 'Consolas', 'Fira Mono', monospace;
             font-size: 0.88rem;
@@ -168,6 +172,34 @@
         .error-banner strong {
             display: block;
             margin-bottom: 4px;
+        }
+
+        /* Disk usage bar */
+        .disk-bar-wrap {
+            margin-top: 0.75rem;
+            background: rgba(255,255,255,0.06);
+            border-radius: 4px;
+            height: 8px;
+            overflow: hidden;
+        }
+
+        .disk-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--ok);
+            transition: width 0.3s ease;
+        }
+
+        .disk-bar-fill.warn  { background: var(--warn); }
+        .disk-bar-fill.error { background: var(--error); }
+
+        .disk-bar-label {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-family: 'Consolas', 'Fira Mono', monospace;
         }
 
         footer {
@@ -224,8 +256,7 @@
         <div class="card-title">Authenticated User</div>
         <div class="row">
             <span class="label">Display Name</span>
-            <span class="value highlight">{{if .RemoteUserDisplayName}}{{.RemoteUserDisplayName}}{{else}}<em
-                    style="color:var(--muted)">—</em>{{end}}</span>
+            <span class="value highlight">{{if .RemoteUserDisplayName}}{{.RemoteUserDisplayName}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
         </div>
         <div class="row">
             <span class="label">Username</span>
@@ -250,8 +281,7 @@
         </div>
         <div class="row">
             <span class="label">State</span>
-            <span class="value ok">{{if .HAState}}{{.HAState}}{{else}}<em
-                    style="color:var(--muted)">—</em>{{end}}</span>
+            <span class="value ok">{{if .HAState}}{{.HAState}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
         </div>
     </div>
 
@@ -260,13 +290,11 @@
         <div class="card-title">Supervisor</div>
         <div class="row">
             <span class="label">Version</span>
-            <span class="value highlight">{{if .SupervisorVersion}}{{.SupervisorVersion}}{{else}}<em
-                    style="color:var(--muted)">—</em>{{end}}</span>
+            <span class="value highlight">{{if .SupervisorVersion}}{{.SupervisorVersion}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
         </div>
         <div class="row">
             <span class="label">Channel</span>
-            <span class="value">{{if .SupervisorChannel}}{{.SupervisorChannel}}{{else}}<em
-                    style="color:var(--muted)">—</em>{{end}}</span>
+            <span class="value">{{if .SupervisorChannel}}{{.SupervisorChannel}}{{else}}<em style="color:var(--muted)">—</em>{{end}}</span>
         </div>
         <div class="row">
             <span class="label">Architecture</span>
@@ -295,13 +323,44 @@
         </div>
     </div>
 
-    <!-- Request Headers Card -->
+    <!-- Disk Usage Card -->
+    <div class="card">
+        <div class="card-title">Disk Usage</div>
+        {{if .DiskTotal}}
+        <div class="row">
+            <span class="label">Total</span>
+            <span class="value">{{.DiskTotal}}</span>
+        </div>
+        <div class="row">
+            <span class="label">Used</span>
+            <span class="value {{if ge .DiskPct 90}}error{{else if ge .DiskPct 75}}warn{{else}}ok{{end}}">{{.DiskUsed}} ({{.DiskPct}}%)</span>
+        </div>
+        <div class="row">
+            <span class="label">Free</span>
+            <span class="value">{{.DiskFree}}</span>
+        </div>
+        <div class="disk-bar-wrap">
+            <div class="disk-bar-fill {{if ge .DiskPct 90}}error{{else if ge .DiskPct 75}}warn{{end}}" style="width:{{.DiskPct}}%"></div>
+        </div>
+        <div class="disk-bar-label">
+            <span>0%</span>
+            <span>{{.DiskPct}}% used</span>
+            <span>100%</span>
+        </div>
+        {{else}}
+        <div class="row">
+            <span class="label">Status</span>
+            <span class="value"><em style="color:var(--muted)">unavailable</em></span>
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Ingress Headers Card -->
     <div class="card">
         <div class="card-title">Ingress Headers Received</div>
         <div class="row">
             <span class="label">X-Ingress-Path</span>
-            <span class="value">{{if .IngressPath}}<span class="ingress-path">{{.IngressPath}}</span>{{else}}<em
-                    style="color:var(--muted)">not set</em>{{end}}</span>
+            <span class="value">{{if .IngressPath}}<span class="ingress-path">{{.IngressPath}}</span>{{else}}<em style="color:var(--muted)">not set</em>{{end}}</span>
         </div>
         <div class="row">
             <span class="label">X-Remote-User-Id</span>
@@ -309,15 +368,14 @@
         </div>
         <div class="row">
             <span class="label">X-Remote-User-Name</span>
-            <span class="value">{{if .RemoteUserName}}{{.RemoteUserName}}{{else}}<em
-                    style="color:var(--muted)">not set</em>{{end}}</span>
+            <span class="value">{{if .RemoteUserName}}{{.RemoteUserName}}{{else}}<em style="color:var(--muted)">not set</em>{{end}}</span>
         </div>
     </div>
 
 </div>
 
 <footer>
-    <span>Tavern v1.0.0 &mdash; HA Ingress Test App</span>
+    <span>Tavern v1.1.0 &mdash; HA Ingress Test App</span>
     <span>Generated {{.Timestamp}}</span>
 </footer>
 

@@ -41,18 +41,22 @@ type supervisorInfo struct {
 type coreInfo struct {
 	Data struct {
 		Version     string `json:"version"`
-		LastVersion string `json:"last_version"`
+		LastVersion string `json:"version_latest"`
 		State       string `json:"state"`
 	} `json:"data"`
 }
 
 // hostInfo mirrors the relevant fields from GET /host/info
+// boot_timestamp is Unix epoch in microseconds.
 type hostInfo struct {
 	Data struct {
-		Hostname      string `json:"hostname"`
-		OS            string `json:"operating_system"`
-		KernelVersion string `json:"kernel"`
-		Uptime        int64  `json:"uptime"`
+		Hostname      string  `json:"hostname"`
+		OS            string  `json:"operating_system"`
+		KernelVersion string  `json:"kernel"`
+		BootTimestamp int64   `json:"boot_timestamp"`
+		DiskTotal     float64 `json:"disk_total"`
+		DiskUsed      float64 `json:"disk_used"`
+		DiskFree      float64 `json:"disk_free"`
 	} `json:"data"`
 }
 
@@ -75,6 +79,10 @@ type pageData struct {
 	OS            string
 	KernelVersion string
 	UptimeHuman   string
+	DiskTotal     string
+	DiskUsed      string
+	DiskFree      string
+	DiskPct       int
 
 	FetchError string
 	Timestamp  string
@@ -145,7 +153,21 @@ func main() {
 				data.Hostname = hi.Data.Hostname
 				data.OS = hi.Data.OS
 				data.KernelVersion = hi.Data.KernelVersion
-				data.UptimeHuman = formatUptime(hi.Data.Uptime)
+
+				// boot_timestamp is microseconds since Unix epoch
+				if hi.Data.BootTimestamp > 0 {
+					bootSecs := hi.Data.BootTimestamp / 1_000_000
+					uptimeSecs := time.Now().Unix() - bootSecs
+					data.UptimeHuman = formatUptime(uptimeSecs)
+				}
+
+				// Disk info (values are in MB)
+				if hi.Data.DiskTotal > 0 {
+					data.DiskTotal = fmt.Sprintf("%.1f GB", hi.Data.DiskTotal/1024)
+					data.DiskUsed = fmt.Sprintf("%.1f GB", hi.Data.DiskUsed/1024)
+					data.DiskFree = fmt.Sprintf("%.1f GB", hi.Data.DiskFree/1024)
+					data.DiskPct = int(hi.Data.DiskUsed / hi.Data.DiskTotal * 100)
+				}
 			}
 
 			if len(fetchErrs) > 0 {
