@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.1
+
+- Replaced the Archives / Settings nav buttons with a hamburger menu (☰) on narrow screens (≤600 px): tapping the button opens a dropdown card with both links, the active page highlighted in accent yellow; tapping outside closes it. No change to layout at wider viewports.
+
 ## 1.5.0
 
 - Removed `options:` and `schema:` blocks from `config.yaml` — Chronicle no longer uses the HA Supervisor options UI for configuration

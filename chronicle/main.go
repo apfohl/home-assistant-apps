@@ -72,7 +72,7 @@ var settingsHTML string
 const (
 	ingressIP  = "172.30.32.2"
 	listenAddr = ":8080"
-	version    = "1.5.0"
+	version    = "1.5.1"
 )
 
 // ---------------------------------------------------------------------------
