@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1
+
+- Changed dashboard header icon to 🗃️ emoji
+- Responsive table layout: at ≤ 600 px the archive table reflows into stacked labelled rows so no columns are clipped on narrow viewports
+
 ## 1.3.0
 
 - Added ingress-enabled web dashboard accessible from the HA sidebar as "Chronicle" (`mdi:email-sync` icon)

@@ -62,7 +62,7 @@ var dashboardHTML string
 const (
 	ingressIP  = "172.30.32.2"
 	listenAddr = ":8080"
-	version    = "1.3.0"
+	version    = "1.3.1"
 )
 
 // ---------------------------------------------------------------------------

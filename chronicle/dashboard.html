@@ -290,12 +290,90 @@
             flex-wrap: wrap;
             gap: 0.5rem;
         }
+
+        /* ── Responsive: stacked rows on narrow viewports ────────────────── */
+
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem 0.75rem;
+            }
+
+            h1 {
+                font-size: 1.3rem;
+            }
+
+            .badge {
+                display: none;
+            }
+
+            /* Hide the header row — labels move inline via ::before */
+            .archive-table thead {
+                display: none;
+            }
+
+            /* Each row becomes a self-contained block */
+            .archive-table tr {
+                display: block;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                margin: 0.6rem 0.8rem;
+                overflow: hidden;
+            }
+
+            .archive-table tbody tr:last-child {
+                margin-bottom: 0.8rem;
+            }
+
+            /* Each cell becomes a labelled flex row */
+            .archive-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.45rem 0.8rem;
+                text-align: left;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            }
+
+            .archive-table td.right {
+                text-align: left;
+            }
+
+            /* Inject the column label from data-label */
+            .archive-table td::before {
+                content: attr(data-label);
+                font-size: 0.7rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                color: var(--muted);
+                flex-shrink: 0;
+                margin-right: 0.75rem;
+                white-space: nowrap;
+            }
+
+            /* Filename cell: stack label above value so long names wrap freely */
+            .archive-table td:first-child {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.2rem;
+            }
+
+            .archive-table td:first-child::before {
+                margin-right: 0;
+            }
+
+            /* Let action buttons wrap and align left */
+            .actions {
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+        }
     </style>
 </head>
 <body>
 
 <header>
-    <div class="header-icon">&#9993;</div>
+    <div class="header-icon">🗃️</div>
     <h1>Chronicle
         <span>IMAP Backup Archives</span>
     </h1>
@@ -330,10 +408,10 @@
             <tbody>
             {{range .Archives}}
                 <tr>
-                    <td><span class="filename">{{.Filename}}</span></td>
-                    <td class="right"><span class="filesize">{{.SizeHuman}}</span></td>
-                    <td class="right"><span class="filedate">{{.ModTimeHuman}}</span></td>
-                    <td class="right">
+                    <td data-label="Filename"><span class="filename">{{.Filename}}</span></td>
+                    <td data-label="Size" class="right"><span class="filesize">{{.SizeHuman}}</span></td>
+                    <td data-label="Created" class="right"><span class="filedate">{{.ModTimeHuman}}</span></td>
+                    <td data-label="Actions" class="right">
                         <div class="actions">
                             <a class="btn btn-download"
                                href="{{$.IngressPath}}/download?file={{.Filename}}"
