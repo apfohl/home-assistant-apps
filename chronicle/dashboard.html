@@ -89,6 +89,39 @@
             white-space: nowrap;
         }
 
+        /* ── Nav tabs ────────────────────────────────────────────────────── */
+
+        .nav {
+            margin-left: auto;
+            display: flex;
+            gap: 0.4rem;
+            flex-shrink: 0;
+        }
+
+        .nav-link {
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            text-decoration: none;
+            padding: 4px 12px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+
+        .nav-link:hover {
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        .nav-link.active {
+            background: rgba(245, 197, 24, 0.12);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
         /* ── Error banner ────────────────────────────────────────────────── */
 
         .error-banner {
@@ -305,9 +338,7 @@
                 font-size: 1.3rem;
             }
 
-            .badge {
-                display: none;
-            }
+            .nav-link span { display: none; }
 
             /* Hide the header row — labels move inline via ::before */
             .archive-table thead {
@@ -380,7 +411,10 @@
     <h1>Chronicle
         <span>IMAP Backup Archives</span>
     </h1>
-    <span class="badge">Ingress Active</span>
+    <nav class="nav">
+        <a class="nav-link active" href="{{.IngressPath}}/">&#128451; Archives</a>
+        <a class="nav-link" href="{{.IngressPath}}/settings">&#9881; Settings</a>
+    </nav>
 </header>
 
 {{if .FetchError}}

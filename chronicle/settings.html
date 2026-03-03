@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronicle — Settings</title>
+    <style>
+        :root {
+            --bg:      #1a1a1a;
+            --surface: #242424;
+            --surface2:#2e2e2e;
+            --border:  #383838;
+            --accent:  #f5c518;
+            --text:    #e8e8e8;
+            --muted:   #888888;
+            --ok:      #4caf82;
+            --warn:    #e07b3a;
+            --error:   #e04c4c;
+            --radius:  8px;
+            --font:    'Segoe UI', system-ui, sans-serif;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 15px;
+            line-height: 1.6;
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+        }
+
+        /* ── Header ─────────────────────────────────────────────────────── */
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            background: #2a2200;
+            border: 1px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.04em;
+        }
+
+        h1 span {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: var(--muted);
+            letter-spacing: 0.02em;
+            margin-top: 2px;
+        }
+
+        /* ── Nav tabs ────────────────────────────────────────────────────── */
+
+        .nav {
+            margin-left: auto;
+            display: flex;
+            gap: 0.4rem;
+            flex-shrink: 0;
+        }
+
+        .nav-link {
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            text-decoration: none;
+            padding: 4px 12px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+
+        .nav-link:hover {
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        .nav-link.active {
+            background: rgba(245, 197, 24, 0.12);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        /* ── Banners ─────────────────────────────────────────────────────── */
+
+        .banner {
+            border-radius: var(--radius);
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+        }
+
+        .banner strong {
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .banner-error {
+            background: rgba(224, 76, 76, 0.12);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        .banner-ok {
+            background: rgba(76, 175, 130, 0.12);
+            border: 1px solid var(--ok);
+            color: var(--ok);
+        }
+
+        /* ── Layout ──────────────────────────────────────────────────────── */
+
+        .stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 760px;
+            margin: 0 auto 2rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: visible;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.9rem 1.2rem;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            border-radius: var(--radius) var(--radius) 0 0;
+        }
+
+        .card-header-icon {
+            font-size: 1.1rem;
+            opacity: 0.85;
+        }
+
+        .card-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+        }
+
+        .card-body {
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* ── Form fields ─────────────────────────────────────────────────── */
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"] {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 0.875rem;
+            padding: 7px 10px;
+            width: 100%;
+            transition: border-color 0.15s;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .field-hint {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        /* ── Toggle (checkbox styled as pill) ───────────────────────────── */
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .toggle-label {
+            font-size: 0.875rem;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-track {
+            position: absolute;
+            inset: 0;
+            background: var(--border);
+            border-radius: 22px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .toggle-track::before {
+            content: "";
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            left: 3px;
+            top: 3px;
+            background: var(--muted);
+            border-radius: 50%;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .toggle input:checked + .toggle-track {
+            background: rgba(245, 197, 24, 0.25);
+        }
+
+        .toggle input:checked + .toggle-track::before {
+            transform: translateX(18px);
+            background: var(--accent);
+        }
+
+        /* ── Account cards ───────────────────────────────────────────────── */
+
+        .account-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .account-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: visible;
+        }
+
+        .account-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.65rem 1rem;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            border-radius: var(--radius) var(--radius) 0 0;
+        }
+
+        .account-number {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+        }
+
+        .account-card-body {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+        }
+
+        .account-remove-btn {
+            margin-left: auto;
+            background: transparent;
+            border: 1px solid rgba(224, 76, 76, 0.35);
+            color: var(--error);
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 3px 9px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: var(--font);
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .account-remove-btn:hover {
+            background: rgba(224, 76, 76, 0.1);
+            border-color: var(--error);
+        }
+
+        /* ── Add account button ──────────────────────────────────────────── */
+
+        .btn-add-account {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: transparent;
+            border: 1px dashed var(--border);
+            color: var(--muted);
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-family: var(--font);
+            width: 100%;
+            justify-content: center;
+            transition: border-color 0.15s, color 0.15s;
+        }
+
+        .btn-add-account:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* ── Save button ─────────────────────────────────────────────────── */
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding-top: 0.5rem;
+        }
+
+        .btn-save {
+            background: var(--accent);
+            color: #1a1a1a;
+            font-size: 0.875rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 9px 24px;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-family: var(--font);
+            transition: opacity 0.15s;
+        }
+
+        .btn-save:hover {
+            opacity: 0.88;
+        }
+
+        /* ── Next run info ───────────────────────────────────────────────── */
+
+        .next-run {
+            font-size: 0.78rem;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .next-run-value {
+            font-family: 'Consolas', 'Fira Mono', monospace;
+            color: var(--ok);
+        }
+
+        /* ── Footer ──────────────────────────────────────────────────────── */
+
+        footer {
+            max-width: 760px;
+            margin: 0 auto;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.78rem;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        /* ── Responsive ──────────────────────────────────────────────────── */
+
+        @media (max-width: 600px) {
+            body { padding: 1rem 0.75rem; }
+            h1 { font-size: 1.3rem; }
+            .nav-link span { display: none; }
+            .field-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-icon">🗃️</div>
+    <h1>Chronicle
+        <span>IMAP Backup Archives</span>
+    </h1>
+    <nav class="nav">
+        <a class="nav-link" href="{{.IngressPath}}/">&#128451; Archives</a>
+        <a class="nav-link active" href="{{.IngressPath}}/settings">&#9881; Settings</a>
+    </nav>
+</header>
+
+{{if .SaveError}}
+<div class="banner banner-error" style="max-width:760px;margin:0 auto 1.5rem;">
+    <strong>Settings not saved</strong>
+    {{.SaveError}}
+</div>
+{{end}}
+
+{{if .SaveSuccess}}
+<div class="banner banner-ok" style="max-width:760px;margin:0 auto 1.5rem;">
+    <strong>Settings saved</strong>
+    All changes have been applied immediately.
+</div>
+{{end}}
+
+<form method="POST" action="{{.IngressPath}}/settings" id="settings-form">
+<div class="stack">
+
+    <!-- ── Schedule & Paths ───────────────────────────────────────────── -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-header-icon">&#128197;</span>
+            <span class="card-title">Schedule &amp; Paths</span>
+        </div>
+        <div class="card-body">
+            <div class="field">
+                <label for="cron_expression">Cron Expression</label>
+                <input type="text" id="cron_expression" name="cron_expression"
+                       value="{{.Settings.CronExpression}}"
+                       placeholder="0 3 * * *" required>
+                <span class="field-hint">Standard 5-field cron syntax (minute hour day month weekday). Default: <code>0 3 * * *</code> — daily at 03:00.</span>
+            </div>
+            {{if .NextRun}}
+            <div class="next-run">
+                <span>&#9654; Next scheduled run:</span>
+                <span class="next-run-value">{{.NextRun}}</span>
+            </div>
+            {{end}}
+            <div class="field">
+                <label for="backup_base_path">Backup Base Path</label>
+                <input type="text" id="backup_base_path" name="backup_base_path"
+                       value="{{.Settings.BackupBasePath}}"
+                       placeholder="/share/chronicle/data" required>
+                <span class="field-hint">Directory where imap-backup stores raw mail data. One sub-folder per account.</span>
+            </div>
+            <div class="field">
+                <label for="archive_path">Archive Path</label>
+                <input type="text" id="archive_path" name="archive_path"
+                       value="{{.Settings.ArchivePath}}"
+                       placeholder="/share/chronicle/archives" required>
+                <span class="field-hint">Directory where compressed <code>.tar.gz</code> archives are written and listed in this dashboard.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Retention & Logging ────────────────────────────────────────── -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-header-icon">&#128260;</span>
+            <span class="card-title">Retention &amp; Logging</span>
+        </div>
+        <div class="card-body">
+            <div class="field-row">
+                <div class="field">
+                    <label for="retention_days">Retention Days</label>
+                    <input type="number" id="retention_days" name="retention_days"
+                           value="{{.Settings.RetentionDays}}"
+                           min="1" required>
+                    <span class="field-hint">Archives older than this many days are automatically deleted after each backup run.</span>
+                </div>
+                <div class="field" style="justify-content:flex-end;padding-bottom:0.25rem;">
+                    <label>Verbose Logging</label>
+                    <div class="toggle-row" style="margin-top:0.5rem;">
+                        <label class="toggle" for="verbose">
+                            <input type="checkbox" id="verbose" name="verbose_cb"
+                                   {{if .Settings.Verbose}}checked{{end}}>
+                            <span class="toggle-track"></span>
+                        </label>
+                        <span class="toggle-label">Pass <code>-v</code> to imap-backup (verbose output in add-on logs)</span>
+                    </div>
+                    <!-- Hidden field carries the actual form value -->
+                    <input type="hidden" name="verbose" id="verbose_hidden"
+                           value="{{if .Settings.Verbose}}true{{else}}false{{end}}">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Accounts ───────────────────────────────────────────────────── -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-header-icon">&#128231;</span>
+            <span class="card-title">IMAP Accounts</span>
+        </div>
+        <div class="card-body">
+            <div class="account-list" id="account-list">
+            {{range $i, $acc := .Settings.Accounts}}
+                <div class="account-card" id="account-{{$i}}">
+                    <div class="account-card-header">
+                        <span class="account-number">Account {{inc $i}}</span>
+                        <button type="button" class="account-remove-btn"
+                                onclick="removeAccount({{$i}})">&#10005; Remove</button>
+                    </div>
+                    <div class="account-card-body">
+                        <div class="field-row">
+                            <div class="field">
+                                <label>Username / Email</label>
+                                <input type="text" name="account_username"
+                                       value="{{$acc.Username}}"
+                                       placeholder="user@example.com" required>
+                            </div>
+                            <div class="field">
+                                <label>IMAP Server</label>
+                                <input type="text" name="account_server"
+                                       value="{{$acc.Server}}"
+                                       placeholder="mail.example.com" required>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Password</label>
+                            <input type="password" name="account_password"
+                                   value="{{$acc.Password}}"
+                                   placeholder="leave blank to keep current password"
+                                   autocomplete="new-password">
+                            <span class="field-hint">Stored in <code>/data/settings.json</code> on the add-on's private volume.</span>
+                        </div>
+                        <div class="field-row">
+                            <div class="field" style="justify-content:flex-end;">
+                                <label>Mirror Mode</label>
+                                <div class="toggle-row" style="margin-top:0.5rem;">
+                                    <label class="toggle" for="mirror_{{$i}}">
+                                        <input type="checkbox" id="mirror_{{$i}}"
+                                               name="mirror_cb_{{$i}}"
+                                               {{if $acc.MirrorMode}}checked{{end}}>
+                                        <span class="toggle-track"></span>
+                                    </label>
+                                    <span class="toggle-label">Sync deletions (mirror remote mailbox)</span>
+                                </div>
+                                <input type="hidden" name="account_mirror_mode"
+                                       id="mirror_hidden_{{$i}}"
+                                       value="{{if $acc.MirrorMode}}true{{else}}false{{end}}">
+                            </div>
+                            <div class="field">
+                                <label>Multi-fetch Size</label>
+                                <input type="number" name="account_multi_fetch_size"
+                                       value="{{$acc.MultiFetchSize}}"
+                                       min="1" placeholder="1">
+                                <span class="field-hint">Number of messages fetched per IMAP request.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {{end}}
+            </div>
+
+            <button type="button" class="btn-add-account" id="btn-add-account">
+                &#43; Add Account
+            </button>
+        </div>
+    </div>
+
+    <!-- ── Save ───────────────────────────────────────────────────────── -->
+    <div class="form-actions">
+        <button type="submit" class="btn-save">Save Settings</button>
+    </div>
+
+</div>
+</form>
+
+<footer>
+    <span>Chronicle v{{.Version}} &mdash; Settings</span>
+</footer>
+
+<script>
+    // ── Toggle helpers ───────────────────────────────────────────────────────
+
+    // Keep hidden inputs in sync with the visual toggle checkboxes.
+    document.getElementById('verbose').addEventListener('change', function () {
+        document.getElementById('verbose_hidden').value = this.checked ? 'true' : 'false';
+    });
+
+    // Wire up all existing mirror-mode toggles on page load.
+    (function () {
+        var checkboxes = document.querySelectorAll('[id^="mirror_"]');
+        checkboxes.forEach(function (cb) {
+            if (cb.id.startsWith('mirror_hidden_')) return;
+            var idx = cb.id.replace('mirror_', '');
+            cb.addEventListener('change', function () {
+                var hidden = document.getElementById('mirror_hidden_' + idx);
+                if (hidden) hidden.value = this.checked ? 'true' : 'false';
+            });
+        });
+    })();
+
+    // ── PRG success banner ───────────────────────────────────────────────────
+    (function () {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('saved') === '1') {
+            // Inject success banner without a template round-trip.
+            var banner = document.createElement('div');
+            banner.className = 'banner banner-ok';
+            banner.style.cssText = 'max-width:760px;margin:0 auto 1.5rem;';
+            banner.innerHTML = '<strong>Settings saved</strong>All changes have been applied immediately.';
+            document.querySelector('.stack').insertAdjacentElement('beforebegin', banner);
+            // Remove the query param from the URL without a reload.
+            history.replaceState(null, '', window.location.pathname);
+        }
+    })();
+
+    // ── Dynamic account rows ─────────────────────────────────────────────────
+
+    var accountCount = {{len .Settings.Accounts}};
+
+    document.getElementById('btn-add-account').addEventListener('click', addAccount);
+
+    function addAccount() {
+        var idx = accountCount;
+        accountCount++;
+
+        var card = document.createElement('div');
+        card.className = 'account-card';
+        card.id = 'account-' + idx;
+        card.innerHTML = [
+            '<div class="account-card-header">',
+            '  <span class="account-number">Account ' + accountCount + '</span>',
+            '  <button type="button" class="account-remove-btn" onclick="removeAccount(' + idx + ')">&#10005; Remove</button>',
+            '</div>',
+            '<div class="account-card-body">',
+            '  <div class="field-row">',
+            '    <div class="field">',
+            '      <label>Username / Email</label>',
+            '      <input type="text" name="account_username" placeholder="user@example.com" required>',
+            '    </div>',
+            '    <div class="field">',
+            '      <label>IMAP Server</label>',
+            '      <input type="text" name="account_server" placeholder="mail.example.com" required>',
+            '    </div>',
+            '  </div>',
+            '  <div class="field">',
+            '    <label>Password</label>',
+            '    <input type="password" name="account_password" placeholder="password" autocomplete="new-password">',
+            '    <span class="field-hint">Stored in <code>/data/settings.json</code> on the add-on\'s private volume.</span>',
+            '  </div>',
+            '  <div class="field-row">',
+            '    <div class="field" style="justify-content:flex-end;">',
+            '      <label>Mirror Mode</label>',
+            '      <div class="toggle-row" style="margin-top:0.5rem;">',
+            '        <label class="toggle" for="mirror_' + idx + '">',
+            '          <input type="checkbox" id="mirror_' + idx + '" onchange="syncMirror(' + idx + ', this)">',
+            '          <span class="toggle-track"></span>',
+            '        </label>',
+            '        <span class="toggle-label">Sync deletions (mirror remote mailbox)</span>',
+            '      </div>',
+            '      <input type="hidden" name="account_mirror_mode" id="mirror_hidden_' + idx + '" value="false">',
+            '    </div>',
+            '    <div class="field">',
+            '      <label>Multi-fetch Size</label>',
+            '      <input type="number" name="account_multi_fetch_size" value="1" min="1" placeholder="1">',
+            '      <span class="field-hint">Number of messages fetched per IMAP request.</span>',
+            '    </div>',
+            '  </div>',
+            '</div>'
+        ].join('');
+
+        document.getElementById('account-list').appendChild(card);
+    }
+
+    function syncMirror(idx, cb) {
+        var hidden = document.getElementById('mirror_hidden_' + idx);
+        if (hidden) hidden.value = cb.checked ? 'true' : 'false';
+    }
+
+    function removeAccount(idx) {
+        var card = document.getElementById('account-' + idx);
+        if (card) {
+            var list = document.getElementById('account-list');
+            var remaining = list.querySelectorAll('.account-card').length;
+            if (remaining <= 1) {
+                alert('At least one account must be configured.');
+                return;
+            }
+            card.remove();
+        }
+    }
+
+    // ── Reload on visibility change (same pattern as archive dashboard) ───────
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible' &&
+            !new URLSearchParams(window.location.search).has('saved')) {
+            window.location.reload();
+        }
+    });
+</script>
+</body>
+</html>

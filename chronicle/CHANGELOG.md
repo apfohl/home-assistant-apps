@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.0
+
+- Added dashboard settings page (`/settings`) for managing all configuration without restarting the add-on
+- Settings are stored in `/data/settings.json` (Chronicle-owned, private to the add-on volume) — not in the HA Supervisor options file
+- On first start, settings are auto-migrated from `/data/options.json` so existing users are not disrupted; the options file is left untouched (Phase 1)
+- Settings changes are applied immediately (hot-reload): cron schedule is rescheduled and in-memory state is updated under a `sync.RWMutex` without restarting the process
+- Settings form covers all fields: cron expression, backup base path, archive path, retention days, verbose logging, and full IMAP account management (add / edit / remove accounts including passwords)
+- Server-side validation for all fields including cron expression parsing
+- Atomic write for `settings.json` (write to temp file → fsync → rename) to prevent corruption on crash
+- Archive dashboard and settings page share consistent nav tabs in the header
+
 ## 1.3.1
 
 - Changed dashboard header icon to 🗃️ emoji
