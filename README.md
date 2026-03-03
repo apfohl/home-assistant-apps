@@ -12,7 +12,7 @@ Designed to be exposed publicly via a reverse proxy such as nginx-proxy-manager.
 
 - Multi-user authentication with bcrypt-hashed passwords
 - Per-directory access control lists
-- Access to Home Assistant shared and media directories
+- Access to Home Assistant share, media, ssl, and app config directories
 - HTTP server suitable for TLS termination by a reverse proxy
 
 ### [Chronicle IMAP Backup](./chronicle)
@@ -25,6 +25,8 @@ compressed archives with configurable retention.
 - Compressed tar.gz archives created after each successful sync
 - Retention-based archive pruning
 - Pure-Go scheduler — no shell scripts or external cron daemon
+- Ingress-enabled web dashboard for browsing, downloading, and deleting archives
+- Built-in settings page for live configuration changes without restarting
 
 ### [Tavern](./tavern)
 

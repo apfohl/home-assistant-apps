@@ -3,5 +3,6 @@ build_from:
   amd64: ghcr.io/home-assistant/amd64-base:3.21
 labels:
   org.opencontainers.image.title: "Home Assistant App: Tavern"
+  org.opencontainers.image.description: "Minimal Home Assistant ingress demo showing live system info via the Supervisor API"
   org.opencontainers.image.source: "https://codeberg.org/apfohl/home-assistant-apps"
   org.opencontainers.image.licenses: "MIT"

@@ -27,7 +27,7 @@ profile chronicle flags=(attach_disconnected,mediate_deleted) {
   # Chronicle binary
   /usr/bin/chronicle ix,
 
-  # App options (options.json)
+  # App data (settings.json and temp imap-backup configs)
   /data/** rw,
 
   # Ruby runtime and imap-backup gem

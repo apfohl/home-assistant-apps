@@ -16,7 +16,7 @@ no external cron daemon.
   automatically
 - Mirror mode support: remote deletions can be reflected locally
 - Pure-Go scheduler — replaces crond with a self-contained binary
-- Fully configurable through the Home Assistant app options UI
+- Fully configurable through the built-in settings dashboard (no HA Supervisor options required)
 
 ## Supported architectures
 

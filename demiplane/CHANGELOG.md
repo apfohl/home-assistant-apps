@@ -1,6 +1,12 @@
-## [Unreleased]
+# Changelog
+
+All notable changes to Demiplane will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [1.1.2] - 2026-03-01
+
+### Fixed
 
 - Use `errors.Is` instead of `==` for `http.ErrServerClosed` check (idiomatic Go error comparison)
 - Call `signal.Stop` after receiving the shutdown signal to clean up the signal channel
@@ -8,13 +14,17 @@
 
 ## [1.1.1] - 2026-03-01
 
+### Added
+
 - Implemented graceful shutdown: the HTTP server listens for SIGTERM/SIGINT and performs a clean shutdown with a 10-second timeout for in-flight requests
 
 ## [1.1.0] - 2026-02-26
 
+### Changed
+
 - Migrated service management from legacy s6-overlay `services.d` to native s6-rc.d layout
 
-## [1.0.0] - 2026-02-23
+## [1.0.0] - 2026-02-22
 
 ### Added
 
