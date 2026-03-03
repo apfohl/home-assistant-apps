@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.0
+
+- Removed `options:` and `schema:` blocks from `config.yaml` — Chronicle no longer uses the HA Supervisor options UI for configuration
+- All configuration is now managed exclusively via the dashboard `/settings` page (`/data/settings.json`)
+- Removed migration code (`loadOptions`, `migrateFromOptions`) and the `-options` CLI flag — the options.json migration path from 1.4.0 is no longer needed
+- Fresh installs (no `settings.json` and no `options.json`) now start normally with hardcoded defaults and an empty account list; the user is prompted to open `/settings` to add accounts
+- Version bumped to `1.5.0`
+
 ## 1.4.0
 
 - Added dashboard settings page (`/settings`) for managing all configuration without restarting the add-on

@@ -1,9 +1,9 @@
 // Chronicle — a scheduled IMAP backup app for Home Assistant.
 //
 // Configuration is read from /data/settings.json (the Chronicle-managed
-// settings file). On first start, if settings.json does not exist, it is
-// auto-migrated from /data/options.json (the standard HA Supervisor options
-// file) so that existing users are not disrupted.
+// settings file). If the file does not exist on first start, hardcoded
+// defaults are written and the HTTP server starts immediately so the user
+// can navigate to /settings to add accounts.
 //
 // For each configured IMAP account the application:
 //
@@ -26,7 +26,7 @@
 //
 // Usage:
 //
-//	chronicle [-options /data/options.json] [-settings /data/settings.json]
+//	chronicle [-settings /data/settings.json]
 package main
 
 import (
@@ -72,23 +72,13 @@ var settingsHTML string
 const (
 	ingressIP  = "172.30.32.2"
 	listenAddr = ":8080"
-	version    = "1.4.0"
+	version    = "1.5.0"
 )
 
 // ---------------------------------------------------------------------------
-// Options model — mirrors /data/options.json produced by HA Supervisor.
-// Used only during migration (Phase 1). In Phase 2 this will be removed.
+// Settings model — the Chronicle-managed settings file at /data/settings.json.
+// This is the runtime source of truth.
 // ---------------------------------------------------------------------------
-
-// options is the top-level structure of the Home Assistant options file.
-type options struct {
-	CronExpression string       `json:"cron_expression"`
-	BackupBasePath string       `json:"backup_base_path"`
-	ArchivePath    string       `json:"archive_path"`
-	RetentionDays  int          `json:"retention_days"`
-	Verbose        bool         `json:"verbose"`
-	Accounts       []accountOpt `json:"accounts"`
-}
 
 // accountOpt holds the configuration for a single IMAP account.
 type accountOpt struct {
@@ -99,12 +89,10 @@ type accountOpt struct {
 	MultiFetchSize int    `json:"multi_fetch_size"`
 }
 
-// ---------------------------------------------------------------------------
-// Settings model — the Chronicle-managed settings file at /data/settings.json.
 // This is the runtime source of truth from Phase 1 onwards.
 // ---------------------------------------------------------------------------
 
-// settings mirrors the options struct but is owned and written by Chronicle
+// settings mirrors the accountOpt struct and is owned and written by Chronicle
 // itself (via the dashboard settings page), not by the HA Supervisor.
 type settings struct {
 	CronExpression string       `json:"cron_expression"`
@@ -191,48 +179,6 @@ type settingsPageData struct {
 }
 
 // ---------------------------------------------------------------------------
-// Options loading (Phase 1 — used only for migration)
-// ---------------------------------------------------------------------------
-
-func loadOptions(path string) (*options, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("open options file: %w", err)
-	}
-	defer func() {
-		if closeErr := f.Close(); closeErr != nil {
-			log.Printf("close options file: %v", closeErr)
-		}
-	}()
-
-	var o options
-	if err = json.NewDecoder(f).Decode(&o); err != nil {
-		return nil, fmt.Errorf("decode options file: %w", err)
-	}
-
-	// Apply defaults.
-	if o.CronExpression == "" {
-		o.CronExpression = "0 3 * * *"
-	}
-	if o.BackupBasePath == "" {
-		o.BackupBasePath = "/share/chronicle/data"
-	}
-	if o.ArchivePath == "" {
-		o.ArchivePath = "/share/chronicle/archives"
-	}
-	if o.RetentionDays == 0 {
-		o.RetentionDays = 5
-	}
-	for i := range o.Accounts {
-		if o.Accounts[i].MultiFetchSize == 0 {
-			o.Accounts[i].MultiFetchSize = 1
-		}
-	}
-
-	return &o, nil
-}
-
-// ---------------------------------------------------------------------------
 // Settings persistence
 // ---------------------------------------------------------------------------
 
@@ -257,36 +203,9 @@ func applySettingsDefaults(s *settings) {
 	}
 }
 
-// migrateFromOptions reads /data/options.json and converts it into a *settings.
-// It writes the result to settingsPath so that subsequent starts do not
-// re-read options.json.
-func migrateFromOptions(optionsPath, settingsPath string) (*settings, error) {
-	o, err := loadOptions(optionsPath)
-	if err != nil {
-		return nil, fmt.Errorf("read options for migration: %w", err)
-	}
-
-	s := &settings{
-		CronExpression: o.CronExpression,
-		BackupBasePath: o.BackupBasePath,
-		ArchivePath:    o.ArchivePath,
-		RetentionDays:  o.RetentionDays,
-		Verbose:        o.Verbose,
-		Accounts:       o.Accounts,
-	}
-
-	if err = saveSettings(settingsPath, s); err != nil {
-		return nil, fmt.Errorf("write migrated settings: %w", err)
-	}
-
-	log.Printf("settings: migrated %d account(s) from %s → %s", len(s.Accounts), optionsPath, settingsPath)
-	return s, nil
-}
-
 // loadSettings loads /data/settings.json. If the file does not exist it
-// tries to auto-migrate from optionsPath. If that also fails it returns
-// hardcoded defaults and writes them to settingsPath.
-func loadSettings(settingsPath, optionsPath string) (*settings, error) {
+// writes hardcoded defaults to settingsPath and returns them.
+func loadSettings(settingsPath string) (*settings, error) {
 	f, err := os.Open(settingsPath)
 	if err == nil {
 		defer func() {
@@ -307,17 +226,9 @@ func loadSettings(settingsPath, optionsPath string) (*settings, error) {
 		return nil, fmt.Errorf("open settings file: %w", err)
 	}
 
-	// settings.json does not exist — try migration from options.json.
-	log.Printf("settings: %s not found, attempting migration from %s", settingsPath, optionsPath)
+	log.Printf("settings: %s not found, writing hardcoded defaults", settingsPath)
 
-	s, migErr := migrateFromOptions(optionsPath, settingsPath)
-	if migErr == nil {
-		return s, nil
-	}
-
-	log.Printf("settings: migration from options.json failed (%v); using hardcoded defaults", migErr)
-
-	s = &settings{}
+	s := &settings{}
 	applySettingsDefaults(s)
 
 	if writeErr := saveSettings(settingsPath, s); writeErr != nil {
@@ -1161,28 +1072,15 @@ func parseSettingsForm(r *http.Request) (*settings, string) {
 // ---------------------------------------------------------------------------
 
 func main() {
-	optionsPath := flag.String("options", "/data/options.json", "path to the HA options JSON file (used for migration only)")
 	settingsPath := flag.String("settings", "/data/settings.json", "path to the Chronicle settings JSON file")
 	flag.Parse()
 
-	s, err := loadSettings(*settingsPath, *optionsPath)
+	s, err := loadSettings(*settingsPath)
 	if err != nil {
 		log.Fatalf("load settings: %v", err)
 	}
 
-	if len(s.Accounts) == 0 {
-		log.Fatal("no accounts configured; open the Chronicle dashboard and add at least one account in Settings")
-	}
-
-	log.Printf("chronicle v%s starting with %d account(s), schedule: %q, retention: %d days",
-		version, len(s.Accounts), s.CronExpression, s.RetentionDays)
-	log.Printf("backup base path : %s", s.BackupBasePath)
-	log.Printf("archive path     : %s", s.ArchivePath)
-
-	for _, acc := range s.Accounts {
-		log.Printf("  account: %s @ %s -> %s",
-			acc.Username, acc.Server, localPath(s.BackupBasePath, acc.Username))
-	}
+	log.Printf("chronicle v%s starting", version)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -1191,16 +1089,30 @@ func main() {
 
 	c := cron.New()
 
-	cronID, err := c.AddFunc(s.CronExpression, func() {
-		// The closure captures state (via the appState pointer) so that
-		// hot-reload naturally picks up the latest settings pointer.
-		state.mu.RLock()
-		current := state.settings
-		state.mu.RUnlock()
-		runAllAccounts(ctx, current)
-	})
-	if err != nil {
-		log.Fatalf("invalid cron expression %q: %v", s.CronExpression, err)
+	var cronID cron.EntryID
+
+	if len(s.Accounts) == 0 {
+		log.Printf("no accounts configured; open the Chronicle dashboard and add accounts in Settings")
+	} else {
+		log.Printf("%d account(s) configured, schedule: %q, retention: %d days",
+			len(s.Accounts), s.CronExpression, s.RetentionDays)
+		log.Printf("backup base path : %s", s.BackupBasePath)
+		log.Printf("archive path     : %s", s.ArchivePath)
+
+		for _, acc := range s.Accounts {
+			log.Printf("  account: %s @ %s -> %s",
+				acc.Username, acc.Server, localPath(s.BackupBasePath, acc.Username))
+		}
+
+		cronID, err = c.AddFunc(s.CronExpression, func() {
+			state.mu.RLock()
+			current := state.settings
+			state.mu.RUnlock()
+			runAllAccounts(ctx, current)
+		})
+		if err != nil {
+			log.Fatalf("invalid cron expression %q: %v", s.CronExpression, err)
+		}
 	}
 
 	c.Start()
@@ -1214,7 +1126,9 @@ func main() {
 		ctx:      ctx,
 	}
 
-	log.Printf("scheduler started; next run at %v", nextRun(c))
+	if len(s.Accounts) > 0 {
+		log.Printf("scheduler started; next run at %v", nextRun(c))
+	}
 
 	// ── HTTP dashboard ───────────────────────────────────────────────────────
 

@@ -18,7 +18,7 @@ no external cron daemon.
   automatically after each backup run
 - Per-account mail stores auto-named from the sanitized username
   (e.g. `user@example.com` → `user_at_example_com`)
-- Fully configurable through the Home Assistant app options UI
+- Fully configurable through the built-in settings page — no HA Supervisor UI required
 
 ## How it works
 
@@ -38,82 +38,32 @@ The scheduler continues running and retries on the next scheduled tick.
 
 ## Configuration
 
-All configuration is done through the Home Assistant app options UI.
+All configuration is managed through the built-in settings page. Open the
+Chronicle dashboard from the HA sidebar and click the **Settings** tab (or
+navigate to `/settings` directly).
 
-### `cron_expression`
+Settings are stored in `/data/settings.json` (private to the add-on data
+volume) and changes take effect immediately without restarting the add-on.
 
-Standard 5-field cron expression controlling when backups run. Default: `0 3 * * *`.
+### Field reference
 
-| Example | Meaning |
-|---|---|
-| `0 3 * * *` | Daily at 03:00 |
-| `0 */6 * * *` | Every 6 hours |
-| `0 2 * * 0` | Weekly on Sunday at 02:00 |
+| Field | Default | Description |
+|---|---|---|
+| `cron_expression` | `0 3 * * *` | Standard 5-field cron expression controlling when backups run. Examples: `0 3 * * *` (daily at 03:00), `0 */6 * * *` (every 6 hours), `0 2 * * 0` (weekly on Sunday at 02:00). |
+| `backup_base_path` | `/share/chronicle/data` | Root directory for incremental IMAP sync data. Each account gets a subdirectory named after its sanitized username (e.g. `user_at_example_com`). Created automatically if it does not exist. |
+| `archive_path` | `/share/chronicle/archives` | Directory where compressed tar.gz archives are written after each sync. Created automatically if it does not exist. |
+| `retention_days` | `5` | Number of days to keep archives. Archives older than this value are deleted after each backup run. |
+| `verbose` | `false` | When enabled, passes `-v` to `imap-backup backup` for detailed debug output in the add-on logs. |
 
-### `backup_base_path`
-
-Root directory for incremental IMAP sync data. Default: `/share/chronicle/data`.
-
-Each account gets a subdirectory derived from its sanitized username:
-
-| Account | Local path |
-|---|---|
-| `user@example.com` | `/share/chronicle/data/user_at_example_com` |
-| `alice@mail.org` | `/share/chronicle/data/alice_at_mail_org` |
-
-The directory is created automatically if it does not exist.
-
-### `archive_path`
-
-Directory where compressed tar.gz archives are written after each sync.
-Default: `/share/chronicle/archives`.
-
-Archive filenames follow the pattern:
-
-```
-chronicle-<sanitized_username>-<timestamp>.tar.gz
-```
-
-For example: `chronicle-user_at_example_com-2026-01-15T03-00-01.tar.gz`.
-
-The directory is created automatically if it does not exist.
-
-### `retention_days`
-
-Number of days to keep archives. Archives older than this value are deleted
-after each backup run. Default: `5`.
-
-### `accounts`
-
-A list of IMAP account objects. Each entry requires:
+#### Per-account fields
 
 | Field | Description |
 |---|---|
-| `username` | IMAP login name — usually the full email address |
-| `password` | IMAP password (stored in options.json; handled by HA Supervisor) |
-| `server` | IMAP server hostname (e.g. `imap.example.com`) |
-| `mirror_mode` | When `true`, messages deleted on the server are also deleted locally |
-| `multi_fetch_size` | Number of messages fetched per IMAP request; reduce to `1` for rate-limited servers |
-
-## Example configuration
-
-```yaml
-cron_expression: "0 3 * * *"
-backup_base_path: /share/chronicle/data
-archive_path: /share/chronicle/archives
-retention_days: 5
-accounts:
-  - username: alice@example.com
-    password: secret
-    server: imap.example.com
-    mirror_mode: true
-    multi_fetch_size: 1
-  - username: bob@another.org
-    password: hunter2
-    server: mail.another.org
-    mirror_mode: false
-    multi_fetch_size: 5
-```
+| `username` | IMAP login name — usually the full email address (e.g. `user@example.com`). |
+| `password` | IMAP account password. Stored in `/data/settings.json` (private to the add-on volume). |
+| `server` | Hostname of the IMAP server (e.g. `imap.example.com` or `imap.gmail.com`). |
+| `mirror_mode` | When `true`, messages deleted on the server are also deleted locally. |
+| `multi_fetch_size` | Number of messages fetched per IMAP request. Reduce to `1` for rate-limited servers. |
 
 ## Storage layout
 

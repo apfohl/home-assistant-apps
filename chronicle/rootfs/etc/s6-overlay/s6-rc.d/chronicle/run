@@ -6,4 +6,4 @@
 
 bashio::log.info "Starting Chronicle IMAP Backup scheduler..."
 
-exec /usr/bin/chronicle -options /data/options.json
+exec /usr/bin/chronicle
