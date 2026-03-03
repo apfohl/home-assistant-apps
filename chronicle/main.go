@@ -9,6 +9,9 @@
 //     account's local mail store into the configured archive path.
 //  4. Prunes archives older than retention_days.
 //
+// The application also exposes an ingress-enabled HTTP dashboard on :8080
+// that lists all archives grouped by account, with download and delete actions.
+//
 // The local_path for each account is auto-derived as:
 //
 //	<backup_base_path>/<sanitized_username>
@@ -25,22 +28,41 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"context"
+	_ "embed"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"html/template"
 	"io"
 	"io/fs"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/robfig/cron/v3"
+)
+
+//go:embed dashboard.html
+var dashboardHTML string
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const (
+	ingressIP  = "172.30.32.2"
+	listenAddr = ":8080"
+	version    = "1.3.0"
 )
 
 // ---------------------------------------------------------------------------
@@ -86,6 +108,34 @@ type imapAccount struct {
 	MirrorMode     bool     `json:"mirror_mode"`
 	Server         string   `json:"server"`
 	MultiFetchSize int      `json:"multi_fetch_size"`
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard data model
+// ---------------------------------------------------------------------------
+
+// archiveEntry describes a single .tar.gz backup file on disk.
+type archiveEntry struct {
+	Filename     string    // e.g. chronicle-user_at_example_com-2026-01-15T03-00-01.tar.gz
+	ModTime      time.Time // file modification time
+	SizeBytes    int64
+	SizeHuman    string // human-readable size, e.g. "12.3 MB"
+	ModTimeHuman string // human-readable date, e.g. "2026-01-15 03:00"
+}
+
+// userBackups groups archives belonging to one account.
+type userBackups struct {
+	DisplayName string         // sanitized username shown as card title
+	Archives    []archiveEntry // sorted newest-first
+}
+
+// pageData is passed into the dashboard HTML template.
+type pageData struct {
+	IngressPath string
+	Users       []userBackups
+	FetchError  string
+	Timestamp   string
+	Version     string
 }
 
 // ---------------------------------------------------------------------------
@@ -428,6 +478,274 @@ func runAllAccounts(ctx context.Context, opts *options) {
 }
 
 // ---------------------------------------------------------------------------
+// Dashboard helpers
+// ---------------------------------------------------------------------------
+
+// formatSize converts bytes to a human-readable string (B / KB / MB / GB).
+func formatSize(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
+}
+
+// isValidArchiveFilename returns true if name is a safe, well-formed archive
+// filename — no path separators, must match the chronicle-*-*.tar.gz pattern.
+var archiveFilePattern = regexp.MustCompile(`^chronicle-[a-zA-Z0-9_\-]+-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}\.tar\.gz$`)
+
+func isValidArchiveFilename(name string) bool {
+	return archiveFilePattern.MatchString(name) &&
+		!strings.Contains(name, "/") &&
+		!strings.Contains(name, "\\") &&
+		!strings.Contains(name, "..")
+}
+
+// scanArchives reads the archive directory and returns archives grouped by
+// sanitized username, each group sorted newest-first.
+func scanArchives(archivePath string, accounts []accountOpt) ([]userBackups, error) {
+	entries, err := os.ReadDir(archivePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// Archive dir not yet created — return empty groups per account.
+			return buildEmptyGroups(accounts), nil
+		}
+		return nil, fmt.Errorf("read archive dir: %w", err)
+	}
+
+	// Build a map: sanitized username → []archiveEntry
+	byUser := make(map[string][]archiveEntry)
+
+	// Seed the map with all configured accounts (even those with no archives yet).
+	for _, acc := range accounts {
+		san := sanitizeUsername(acc.Username)
+		if _, ok := byUser[san]; !ok {
+			byUser[san] = nil
+		}
+	}
+
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasPrefix(name, "chronicle-") || !strings.HasSuffix(name, ".tar.gz") {
+			continue
+		}
+
+		// Extract the sanitized username from the filename.
+		// Format: chronicle-<sanitized>-<YYYY-MM-DDThh-mm-ss>.tar.gz
+		// The timestamp part is always 19 chars: YYYY-MM-DDThh-mm-ss
+		// plus ".tar.gz" = 7 chars, plus the leading dash = 20 chars from the end.
+		const suffixLen = len("-2006-01-02T15-04-05.tar.gz") // 27
+		trimmed := strings.TrimPrefix(name, "chronicle-")    // <sanitized>-<timestamp>.tar.gz
+		if len(trimmed) <= suffixLen {
+			continue
+		}
+		san := trimmed[:len(trimmed)-suffixLen]
+
+		// Only include archives belonging to a configured account.
+		if _, ok := byUser[san]; !ok {
+			continue
+		}
+
+		info, err := e.Info()
+		if err != nil {
+			log.Printf("dashboard: stat %s: %v", name, err)
+			continue
+		}
+
+		byUser[san] = append(byUser[san], archiveEntry{
+			Filename:     name,
+			ModTime:      info.ModTime(),
+			SizeBytes:    info.Size(),
+			SizeHuman:    formatSize(info.Size()),
+			ModTimeHuman: info.ModTime().UTC().Format("2006-01-02 15:04 UTC"),
+		})
+	}
+
+	// Sort each user's archives newest-first, then build the result slice
+	// ordered by the configured account order.
+	result := make([]userBackups, 0, len(accounts))
+	seen := make(map[string]bool)
+	for _, acc := range accounts {
+		san := sanitizeUsername(acc.Username)
+		if seen[san] {
+			continue
+		}
+		seen[san] = true
+		archives := byUser[san]
+		sort.Slice(archives, func(i, j int) bool {
+			return archives[i].ModTime.After(archives[j].ModTime)
+		})
+		result = append(result, userBackups{
+			DisplayName: acc.Username,
+			Archives:    archives,
+		})
+	}
+
+	return result, nil
+}
+
+// buildEmptyGroups returns a slice of userBackups with no archives.
+func buildEmptyGroups(accounts []accountOpt) []userBackups {
+	result := make([]userBackups, 0, len(accounts))
+	seen := make(map[string]bool)
+	for _, acc := range accounts {
+		san := sanitizeUsername(acc.Username)
+		if seen[san] {
+			continue
+		}
+		seen[san] = true
+		result = append(result, userBackups{DisplayName: acc.Username})
+	}
+	return result
+}
+
+// ---------------------------------------------------------------------------
+// HTTP handlers
+// ---------------------------------------------------------------------------
+
+// enforceIngress rejects any request that did not originate from the HA
+// ingress gateway IP. Returns false if the request was rejected.
+func enforceIngress(w http.ResponseWriter, r *http.Request) bool {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	if host != ingressIP {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return false
+	}
+	return true
+}
+
+// handleDashboard serves the main dashboard page.
+func handleDashboard(tmpl *template.Template, opts *options) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !enforceIngress(w, r) {
+			return
+		}
+
+		ingressPath := r.Header.Get("X-Ingress-Path")
+		if ingressPath == "" {
+			ingressPath = ""
+		}
+
+		data := pageData{
+			IngressPath: ingressPath,
+			Timestamp:   time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
+			Version:     version,
+		}
+
+		users, err := scanArchives(opts.ArchivePath, opts.Accounts)
+		if err != nil {
+			data.FetchError = fmt.Sprintf("Failed to scan archive directory: %v", err)
+		} else {
+			data.Users = users
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Cache-Control", "no-store")
+		if err = tmpl.Execute(w, data); err != nil {
+			log.Printf("dashboard template error: %v", err)
+		}
+	}
+}
+
+// handleDownload streams an archive file as an attachment download.
+func handleDownload(opts *options) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !enforceIngress(w, r) {
+			return
+		}
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		filename := r.URL.Query().Get("file")
+		if !isValidArchiveFilename(filename) {
+			http.Error(w, "invalid filename", http.StatusBadRequest)
+			return
+		}
+
+		fullPath := filepath.Join(opts.ArchivePath, filename)
+		f, err := os.Open(fullPath)
+		if err != nil {
+			if os.IsNotExist(err) {
+				http.Error(w, "not found", http.StatusNotFound)
+			} else {
+				http.Error(w, "internal error", http.StatusInternalServerError)
+			}
+			return
+		}
+		defer func() {
+			if closeErr := f.Close(); closeErr != nil {
+				log.Printf("download: close %s: %v", filename, closeErr)
+			}
+		}()
+
+		info, err := f.Stat()
+		if err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/gzip")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", info.Size()))
+		w.Header().Set("Cache-Control", "no-store")
+
+		if _, err = io.Copy(w, f); err != nil {
+			log.Printf("download: stream %s: %v", filename, err)
+		}
+	}
+}
+
+// handleDelete removes an archive file and redirects back to the dashboard.
+func handleDelete(opts *options) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !enforceIngress(w, r) {
+			return
+		}
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		filename := r.FormValue("file")
+		if !isValidArchiveFilename(filename) {
+			http.Error(w, "invalid filename", http.StatusBadRequest)
+			return
+		}
+
+		fullPath := filepath.Join(opts.ArchivePath, filename)
+		if err := os.Remove(fullPath); err != nil && !os.IsNotExist(err) {
+			log.Printf("delete: remove %s: %v", filename, err)
+			http.Error(w, "failed to delete file", http.StatusInternalServerError)
+			return
+		}
+
+		log.Printf("dashboard: deleted archive %s", filename)
+
+		// Post/Redirect/Get — redirect back to the dashboard root.
+		ingressPath := r.Header.Get("X-Ingress-Path")
+		http.Redirect(w, r, ingressPath+"/", http.StatusSeeOther)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 
@@ -444,8 +762,8 @@ func main() {
 		log.Fatal("no accounts configured; add at least one account in the app options")
 	}
 
-	log.Printf("chronicle starting with %d account(s), schedule: %q, retention: %d days",
-		len(opts.Accounts), opts.CronExpression, opts.RetentionDays)
+	log.Printf("chronicle v%s starting with %d account(s), schedule: %q, retention: %d days",
+		version, len(opts.Accounts), opts.CronExpression, opts.RetentionDays)
 	log.Printf("backup base path : %s", opts.BackupBasePath)
 	log.Printf("archive path     : %s", opts.ArchivePath)
 
@@ -455,8 +773,10 @@ func main() {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Set up the cron scheduler.
+	// ── Cron scheduler ──────────────────────────────────────────────────────
+
 	c := cron.New()
 
 	_, err = c.AddFunc(opts.CronExpression, func() {
@@ -469,14 +789,59 @@ func main() {
 	c.Start()
 	log.Printf("scheduler started; next run at %v", nextRun(c))
 
+	// ── HTTP dashboard ───────────────────────────────────────────────────────
+
+	tmpl, err := template.New("dashboard").Funcs(template.FuncMap{
+		"not": func(v interface{}) bool {
+			if v == nil {
+				return true
+			}
+			// Handle slices
+			if s, ok := v.([]userBackups); ok {
+				return len(s) == 0
+			}
+			return false
+		},
+	}).Parse(dashboardHTML)
+	if err != nil {
+		log.Fatalf("parse dashboard template: %v", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handleDashboard(tmpl, opts))
+	mux.HandleFunc("/download", handleDownload(opts))
+	mux.HandleFunc("/delete", handleDelete(opts))
+
+	srv := &http.Server{
+		Addr:    listenAddr,
+		Handler: mux,
+	}
+
+	go func() {
+		log.Printf("dashboard listening on %s (ingress-only from %s)", listenAddr, ingressIP)
+		if err = srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("dashboard ListenAndServe error: %v", err)
+		}
+	}()
+
+	// ── Graceful shutdown ────────────────────────────────────────────────────
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
-	cancel()
 
-	log.Println("shutting down scheduler...")
+	log.Println("shutting down...")
+	cancel() // cancel any in-progress imap-backup subprocess
+
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	if err = srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("dashboard shutdown error: %v", err)
+	}
+
 	<-c.Stop().Done()
-	log.Println("scheduler stopped")
+	log.Println("chronicle stopped")
 }
 
 // nextRun returns the next scheduled time from the cron scheduler, or a zero

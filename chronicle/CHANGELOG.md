@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0
+
+- Added ingress-enabled web dashboard accessible from the HA sidebar as "Chronicle" (`mdi:email-sync` icon)
+- Dashboard lists all backup archives grouped by account, sorted newest-first, in vertically-stacked cards
+- Each archive entry shows filename, file size, and creation timestamp
+- Download action streams the `.tar.gz` archive directly as an attachment
+- Delete action removes an archive after a browser confirmation dialog
+- Dark grey and yellow color scheme; footer matches Tavern style
+- HTTP server runs on port 8080 in the same process as the cron scheduler, with graceful shutdown on SIGTERM/SIGINT
+
 ## 1.2.2
 
 - Propagate context cancellation into `runImapBackup` and `backupAccount` via `context.WithCancel`, so that a SIGTERM/SIGINT immediately cancels any in-progress `imap-backup` subprocess

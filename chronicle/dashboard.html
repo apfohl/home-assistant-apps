@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronicle — IMAP Backup Archives</title>
+    <style>
+        :root {
+            --bg:      #1a1a1a;
+            --surface: #242424;
+            --surface2:#2e2e2e;
+            --border:  #383838;
+            --accent:  #f5c518;
+            --text:    #e8e8e8;
+            --muted:   #888888;
+            --ok:      #4caf82;
+            --warn:    #e07b3a;
+            --error:   #e04c4c;
+            --radius:  8px;
+            --font:    'Segoe UI', system-ui, sans-serif;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 15px;
+            line-height: 1.6;
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+        }
+
+        /* ── Header ─────────────────────────────────────────────────────── */
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            background: #2a2200;
+            border: 1px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.04em;
+        }
+
+        h1 span {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: var(--muted);
+            letter-spacing: 0.02em;
+            margin-top: 2px;
+        }
+
+        .badge {
+            margin-left: auto;
+            background: var(--ok);
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            padding: 3px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        /* ── Error banner ────────────────────────────────────────────────── */
+
+        .error-banner {
+            background: rgba(224, 76, 76, 0.12);
+            border: 1px solid var(--error);
+            border-radius: var(--radius);
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--error);
+        }
+
+        .error-banner strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* ── User cards stack ────────────────────────────────────────────── */
+
+        .stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 960px;
+            margin: 0 auto 2rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.9rem 1.2rem;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-header-icon {
+            font-size: 1.1rem;
+            opacity: 0.85;
+        }
+
+        .card-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+        }
+
+        .card-count {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-family: 'Consolas', 'Fira Mono', monospace;
+        }
+
+        /* ── Archive table ───────────────────────────────────────────────── */
+
+        .archive-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .archive-table th {
+            text-align: left;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            padding: 0.55rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+        }
+
+        .archive-table th.right,
+        .archive-table td.right {
+            text-align: right;
+        }
+
+        .archive-table td {
+            padding: 0.65rem 1.2rem;
+            font-size: 0.875rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            vertical-align: middle;
+        }
+
+        .archive-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .archive-table tr:hover td {
+            background: rgba(245, 197, 24, 0.04);
+        }
+
+        .filename {
+            font-family: 'Consolas', 'Fira Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--text);
+            word-break: break-all;
+        }
+
+        .filesize {
+            font-family: 'Consolas', 'Fira Mono', monospace;
+            font-size: 0.82rem;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        .filedate {
+            font-size: 0.82rem;
+            color: var(--muted);
+            white-space: nowrap;
+        }
+
+        /* ── Action buttons ──────────────────────────────────────────────── */
+
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            white-space: nowrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            padding: 4px 10px;
+            border-radius: 5px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            background: transparent;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+            font-family: inherit;
+        }
+
+        .btn-download {
+            color: var(--accent);
+            border-color: rgba(245, 197, 24, 0.35);
+        }
+
+        .btn-download:hover {
+            background: rgba(245, 197, 24, 0.1);
+            border-color: var(--accent);
+        }
+
+        .btn-delete {
+            color: var(--error);
+            border-color: rgba(224, 76, 76, 0.35);
+        }
+
+        .btn-delete:hover {
+            background: rgba(224, 76, 76, 0.1);
+            border-color: var(--error);
+        }
+
+        /* form reset so delete button matches visually */
+        form.inline {
+            display: inline;
+        }
+
+        form.inline button {
+            /* inherits .btn .btn-delete */
+        }
+
+        /* ── Empty state ─────────────────────────────────────────────────── */
+
+        .empty {
+            padding: 1.5rem 1.2rem;
+            color: var(--muted);
+            font-size: 0.875rem;
+            font-style: italic;
+            text-align: center;
+        }
+
+        /* ── Footer ──────────────────────────────────────────────────────── */
+
+        footer {
+            max-width: 960px;
+            margin: 0 auto;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.78rem;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-icon">&#9993;</div>
+    <h1>Chronicle
+        <span>IMAP Backup Archives</span>
+    </h1>
+    <span class="badge">Ingress Active</span>
+</header>
+
+{{if .FetchError}}
+<div class="error-banner">
+    <strong>Error</strong>
+    {{.FetchError}}
+</div>
+{{end}}
+
+<div class="stack">
+{{range .Users}}
+    <div class="card">
+        <div class="card-header">
+            <span class="card-header-icon">&#128231;</span>
+            <span class="card-title">{{.DisplayName}}</span>
+            <span class="card-count">{{len .Archives}} archive{{if ne (len .Archives) 1}}s{{end}}</span>
+        </div>
+        {{if .Archives}}
+        <table class="archive-table">
+            <thead>
+                <tr>
+                    <th>Filename</th>
+                    <th class="right">Size</th>
+                    <th class="right">Created</th>
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {{range .Archives}}
+                <tr>
+                    <td><span class="filename">{{.Filename}}</span></td>
+                    <td class="right"><span class="filesize">{{.SizeHuman}}</span></td>
+                    <td class="right"><span class="filedate">{{.ModTimeHuman}}</span></td>
+                    <td class="right">
+                        <div class="actions">
+                            <a class="btn btn-download"
+                               href="{{$.IngressPath}}/download?file={{.Filename}}"
+                               download="{{.Filename}}">&#8595; Download</a>
+                            <form class="inline"
+                                  method="POST"
+                                  action="{{$.IngressPath}}/delete"
+                                  onsubmit="return confirmDelete('{{.Filename}}', this)">
+                                <input type="hidden" name="file" value="{{.Filename}}">
+                                <button type="submit" class="btn btn-delete">&#10005; Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {{end}}
+            </tbody>
+        </table>
+        {{else}}
+        <div class="empty">No archives found for this account.</div>
+        {{end}}
+    </div>
+{{end}}
+{{if not .Users}}
+<div class="card">
+    <div class="empty">No backup archives found. Archives appear here after the first scheduled backup run.</div>
+</div>
+{{end}}
+</div>
+
+<footer>
+    <span>Chronicle v{{.Version}} &mdash; IMAP Backup Dashboard</span>
+    <span>Generated {{.Timestamp}}</span>
+</footer>
+
+<script>
+    // Reload whenever the HA panel iframe becomes visible again (same pattern as Tavern).
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+            window.location.reload();
+        }
+    });
+
+    // Called by the delete form's onsubmit handler.
+    function confirmDelete(filename, formEl) {
+        if (!confirm('Delete archive:\n' + filename + '\n\nThis cannot be undone.')) {
+            return false;
+        }
+        return true;
+    }
+</script>
+</body>
+</html>
