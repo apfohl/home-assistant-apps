@@ -4,6 +4,12 @@ All notable changes to Chronicle will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.5.2] - 2026-03-03
+
+### Fixed
+
+- Equalized height of the Download and Delete action buttons: replaced `padding`-based sizing with an explicit `height: 26px`, added `appearance: none` to strip browser UA button chrome, and changed `form.inline` to `display: inline-flex` so the form wrapper no longer shifts the delete button's baseline relative to the download link.
+
 ## [1.5.1] - 2026-03-03
 
 ### Changed
