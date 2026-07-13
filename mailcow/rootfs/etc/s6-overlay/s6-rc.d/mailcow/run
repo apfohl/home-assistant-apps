@@ -1,0 +1,11 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start the Mailcow Alias Manager
+# s6-overlay docs: https://github.com/just-containers/s6-overlay
+# ==============================================================================
+
+bashio::log.info "Starting Mailcow Alias Manager..."
+
+export ENVIRONMENT=production
+
+exec /usr/bin/mailcow

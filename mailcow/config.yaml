@@ -1,0 +1,16 @@
+name: "Mailcow Alias Manager"
+version: "1.0.0"
+slug: "mailcow"
+description: "Manage mailbox aliases on hosted mailcow through the web UI"
+url: "https://codeberg.org/apfohl/home-assistant-apps/src/branch/main/mailcow"
+arch:
+  - aarch64
+  - amd64
+init: false
+startup: services
+ingress: true
+ingress_port: 8080
+panel_icon: "mdi:email-multiple"
+panel_title: "Mailcow"
+hassio_api: true
+apparmor: true

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mailcow — Aliases</title>
+    <style>
+        :root {
+            --bg:      #1a1a1a;
+            --surface: #242424;
+            --surface2:#2e2e2e;
+            --border:  #383838;
+            --accent:  #f5c518;
+            --text:    #e8e8e8;
+            --muted:   #888888;
+            --ok:      #4caf82;
+            --error:   #e04c4c;
+            --radius:  8px;
+            --font:    'Segoe UI', system-ui, sans-serif;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            font-size: 15px;
+            line-height: 1.6;
+            padding: 2rem 1.5rem;
+            overflow-y: auto;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            background: #2a2200;
+            border: 1px solid var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: 0.04em;
+        }
+
+        h1 span {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 400;
+            color: var(--muted);
+            letter-spacing: 0.02em;
+            margin-top: 2px;
+        }
+
+        .nav {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .nav-toggle {
+            display: none;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            color: var(--muted);
+            font-size: 1.1rem;
+            line-height: 1;
+            padding: 4px 9px;
+            cursor: pointer;
+            transition: color 0.15s, border-color 0.15s;
+        }
+
+        .nav-toggle:hover,
+        .nav.open .nav-toggle {
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .nav-link {
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            text-decoration: none;
+            padding: 4px 12px;
+            border-radius: 5px;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+
+        .nav-link:hover {
+            color: var(--text);
+            border-color: var(--accent);
+        }
+
+        .nav-link.active {
+            background: rgba(245, 197, 24, 0.12);
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        @media (max-width: 600px) {
+            .nav-toggle { display: block; }
+            .nav-menu {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: calc(100% + 6px);
+                right: 0;
+                background: var(--surface2);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 0.4rem;
+                gap: 0.3rem;
+                min-width: 140px;
+                z-index: 100;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            }
+            .nav.open .nav-menu { display: flex; }
+            .nav-link { padding: 6px 14px; font-size: 0.82rem; }
+        }
+
+        .error-banner {
+            background: rgba(224, 76, 76, 0.12);
+            border: 1px solid var(--error);
+            border-radius: var(--radius);
+            padding: 0.8rem 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--error);
+        }
+
+        .error-banner strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            max-width: 960px;
+            margin: 0 auto 2rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.9rem 1.2rem;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+        }
+
+        .card-count {
+            margin-left: auto;
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-family: 'Consolas', 'Fira Mono', monospace;
+        }
+
+        .btn-create {
+            margin-left: auto;
+            background: transparent;
+            border: 1px solid rgba(245, 197, 24, 0.35);
+            color: var(--accent);
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-decoration: none;
+            padding: 0 10px;
+            height: 26px;
+            border-radius: 5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        .btn-create:hover {
+            background: rgba(245, 197, 24, 0.1);
+            border-color: var(--accent);
+        }
+
+        .alias-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .alias-table th {
+            text-align: left;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted);
+            padding: 0.55rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+        }
+
+        .alias-table th.right,
+        .alias-table td.right {
+            text-align: right;
+        }
+
+        .alias-table td {
+            padding: 0.65rem 1.2rem;
+            font-size: 0.875rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            vertical-align: middle;
+        }
+
+        .alias-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .alias-table tr:hover td {
+            background: rgba(245, 197, 24, 0.04);
+        }
+
+        .address {
+            font-family: 'Consolas', 'Fira Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--text);
+            word-break: break-all;
+        }
+
+        .goto {
+            font-family: 'Consolas', 'Fira Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--muted);
+            display: block;
+            max-width: 420px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 960px) {
+            .goto { max-width: 280px; }
+        }
+
+        @media (max-width: 760px) {
+            .goto { max-width: 180px; }
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            white-space: nowrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            padding: 0 10px;
+            height: 26px;
+            border-radius: 5px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            text-decoration: none;
+            background: transparent;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+            font-family: inherit;
+            box-sizing: border-box;
+            line-height: 1;
+            margin: 0;
+            vertical-align: middle;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .btn-delete {
+            color: var(--error);
+            border-color: rgba(224, 76, 76, 0.35);
+        }
+
+        .btn-delete:hover {
+            background: rgba(224, 76, 76, 0.1);
+            border-color: var(--error);
+        }
+
+        form.inline {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .empty {
+            padding: 1.5rem 1.2rem;
+            color: var(--muted);
+            font-size: 0.875rem;
+            font-style: italic;
+            text-align: center;
+        }
+
+        footer {
+            max-width: 960px;
+            margin: 0 auto;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.78rem;
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 1rem 0.75rem; }
+            h1 { font-size: 1.3rem; }
+            .alias-table thead { display: none; }
+            .alias-table tr {
+                display: block;
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                margin: 0.6rem 0.8rem;
+                overflow: hidden;
+            }
+            .alias-table tbody tr:last-child { margin-bottom: 0.8rem; }
+            .alias-table td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.45rem 0.8rem;
+                text-align: left;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            }
+            .alias-table td.right { text-align: left; }
+            .alias-table td::before {
+                content: attr(data-label);
+                font-size: 0.7rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                color: var(--muted);
+                flex-shrink: 0;
+                margin-right: 0.75rem;
+                white-space: nowrap;
+            }
+            .alias-table td:first-child,
+            .alias-table td[data-label="Goto addresses"] {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.2rem;
+            }
+            .alias-table td:first-child::before,
+            .alias-table td[data-label="Goto addresses"]::before { margin-right: 0; }
+            .alias-table td[data-label="Goto addresses"] .goto {
+                white-space: normal;
+                word-break: break-all;
+                max-width: none;
+            }
+            .actions {
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-icon">✉️</div>
+    <h1>Mailcow
+        <span>Mailbox Alias Manager</span>
+    </h1>
+    <nav class="nav">
+        <button class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="nav-menu">&#9776;</button>
+        <div class="nav-menu" id="nav-menu">
+            <a class="nav-link active" href="{{.IngressPath}}/">Aliases</a>
+            <a class="nav-link" href="{{.IngressPath}}/settings">Settings</a>
+        </div>
+    </nav>
+</header>
+
+{{if .FetchError}}
+<div class="error-banner">
+    <strong>Error</strong>
+    {{.FetchError}}
+</div>
+{{end}}
+
+<div class="stack">
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Aliases</span>
+            <span class="card-count">{{len .Aliases}} alias{{if ne (len .Aliases) 1}}es{{end}}</span>
+            <a class="btn-create" href="{{.IngressPath}}/create">+ Create alias</a>
+        </div>
+        {{if .Aliases}}
+        <table class="alias-table">
+            <thead>
+                <tr>
+                    <th>Alias address</th>
+                    <th>Goto addresses</th>
+                    <th class="right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {{range .Aliases}}
+                <tr>
+                    <td data-label="Alias address"><span class="address">{{.Address}}</span></td>
+                    <td data-label="Goto addresses">
+                        <span class="goto" title="{{.Goto}}">{{if .Goto}}{{.Goto}}{{else}}-{{end}}</span>
+                    </td>
+                    <td data-label="Actions" class="right">
+                        <div class="actions">
+                            <form class="inline"
+                                  method="POST"
+                                  action="{{$.IngressPath}}/delete"
+                                  onsubmit="return confirmDelete('{{.Address}}', this)">
+                                <input type="hidden" name="address" value="{{.Address}}">
+                                <button type="submit" class="btn btn-delete">&#10005; Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {{end}}
+            </tbody>
+        </table>
+        {{else}}
+        <div class="empty">No aliases found. Create one to get started.</div>
+        {{end}}
+    </div>
+</div>
+
+<footer>
+    <span>Mailcow v{{.Version}} &mdash; Alias Dashboard</span>
+    <span>Generated {{.Timestamp}}</span>
+</footer>
+
+<script>
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+            window.location.reload();
+        }
+    });
+
+    function confirmDelete(address, formEl) {
+        if (!confirm('Delete alias:\n' + address + '\n\nThis cannot be undone.')) {
+            return false;
+        }
+        return true;
+    }
+
+    (function () {
+        var nav    = document.querySelector('.nav');
+        var toggle = document.querySelector('.nav-toggle');
+        if (!nav || !toggle) return;
+
+        toggle.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var open = nav.classList.toggle('open');
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!nav.contains(e.target)) {
+                nav.classList.remove('open');
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }());
+</script>
+</body>
+</html>

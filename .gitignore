@@ -2,6 +2,10 @@
 demiplane/demiplane
 chronicle/chronicle
 tavern/tavern
+mailcow/mailcow
+
+# local development data
+mailcow/dev-data/
 
 # IDEs
 .idea
