@@ -47,7 +47,7 @@ const (
 	ingressIP       = "172.30.32.2"
 	listenAddr      = ":8080"
 	roleDomainAdmin = RoleDomainAdmin
-	version         = "1.0.0"
+	version         = "1.1.0"
 
 	prodSettingsPath = "/data/settings.json"
 	prodCookieFile   = "/data/mailcow-cookie-jar.json"

@@ -9,6 +9,7 @@ alternative access method is used.
 - List all mailbox aliases for the configured domain-admin account
 - Create new aliases with one or more comma-separated goto addresses
 - Delete aliases with a browser confirmation dialog
+- Search/filter aliases by alias address or goto addresses
 - All configuration is managed through the built-in settings page
 - Login role is fixed to `domain_admin`
 
@@ -20,7 +21,7 @@ it logs in to hosted mailcow and keeps the session in a cookie jar at
 
 The ingress-enabled dashboard on port 8080 provides:
 
-- `/` — alias list with delete action and a create button
+- `/` — alias list with live search, delete action, and a create button
 - `/create` — form for new alias address and goto addresses
 - `/settings` — username and password management
 

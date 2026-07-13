@@ -228,6 +228,81 @@
             border-color: var(--accent);
         }
 
+        .search-bar {
+            padding: 0.8rem 1.2rem;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface2);
+        }
+
+        .search-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            width: 100%;
+        }
+
+        .search-wrapper input {
+            width: 100%;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.875rem;
+            padding: 0.45rem 2.2rem 0.45rem 0.75rem;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .search-wrapper input::placeholder {
+            color: var(--muted);
+        }
+
+        .search-wrapper input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(245, 197, 24, 0.15);
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 0.4rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transition: color 0.15s, opacity 0.15s, border-color 0.15s;
+        }
+
+        .search-clear.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .search-clear:hover {
+            color: var(--text);
+            border-color: var(--border);
+        }
+
+        .no-matches {
+            padding: 1.5rem 1.2rem;
+            color: var(--muted);
+            font-size: 0.875rem;
+            font-style: italic;
+            text-align: center;
+        }
+
         .alias-table {
             width: 100%;
             border-collapse: collapse;
@@ -434,13 +509,23 @@
 {{end}}
 
 <div class="stack">
-    <div class="card">
-        <div class="card-header">
-            <span class="card-title">Aliases</span>
-            <span class="card-count">{{len .Aliases}} alias{{if ne (len .Aliases) 1}}es{{end}}</span>
-            <a class="btn-create" href="{{.IngressPath}}/create">+ Create alias</a>
-        </div>
-        {{if .Aliases}}
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Aliases</span>
+                <span class="card-count">{{len .Aliases}} alias{{if ne (len .Aliases) 1}}es{{end}}</span>
+                <a class="btn-create" href="{{.IngressPath}}/create">+ Create alias</a>
+            </div>
+            {{if .Aliases}}
+            <div class="search-bar">
+                <div class="search-wrapper">
+                    <input type="text"
+                           id="alias-search"
+                           placeholder="Filter aliases…"
+                           aria-label="Filter aliases"
+                           autocomplete="off">
+                    <button type="button" class="search-clear" id="alias-search-clear" aria-label="Clear search">&#10005;</button>
+                </div>
+            </div>
         <table class="alias-table">
             <thead>
                 <tr>
@@ -471,6 +556,7 @@
             {{end}}
             </tbody>
         </table>
+        <div class="no-matches" id="no-matches" style="display: none;">No aliases match your search.</div>
         {{else}}
         <div class="empty">No aliases found. Create one to get started.</div>
         {{end}}
@@ -513,6 +599,68 @@
                 toggle.setAttribute('aria-expanded', 'false');
             }
         });
+    }());
+
+    (function () {
+        var searchInput = document.getElementById('alias-search');
+        var clearBtn    = document.getElementById('alias-search-clear');
+        var table       = document.querySelector('.alias-table');
+        var noMatches   = document.getElementById('no-matches');
+        var countLabel  = document.querySelector('.card-count');
+        if (!searchInput || !table) return;
+
+        var rows  = Array.from(table.querySelectorAll('tbody tr'));
+        var total = rows.length;
+
+        function pluralize(n) {
+            return n + ' alias' + (n !== 1 ? 'es' : '');
+        }
+
+        function updateCount(shown) {
+            if (!countLabel) return;
+            countLabel.textContent = shown === total ? pluralize(total) : shown + ' of ' + pluralize(total);
+        }
+
+        function filter() {
+            var term = searchInput.value.trim().toLowerCase();
+            var shown = 0;
+
+            if (clearBtn) {
+                clearBtn.classList.toggle('visible', term.length > 0);
+            }
+
+            rows.forEach(function (row) {
+                var addressEl = row.querySelector('.address');
+                var gotoEl    = row.querySelector('.goto');
+                var address   = addressEl ? addressEl.textContent.toLowerCase() : '';
+                var goto      = gotoEl ? gotoEl.textContent.toLowerCase() : '';
+
+                if (!term || address.indexOf(term) !== -1 || goto.indexOf(term) !== -1) {
+                    row.style.display = '';
+                    shown++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            updateCount(shown);
+
+            if (noMatches) {
+                noMatches.style.display = (shown === 0 && term.length > 0) ? 'block' : 'none';
+            }
+        }
+
+        searchInput.addEventListener('input', filter);
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function () {
+                searchInput.value = '';
+                searchInput.focus();
+                filter();
+            });
+        }
+
+        updateCount(total);
     }());
 </script>
 </body>
