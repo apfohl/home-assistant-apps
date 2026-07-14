@@ -21,8 +21,9 @@ it logs in to hosted mailcow and keeps the session in a cookie jar at
 
 The ingress-enabled dashboard on port 8080 provides:
 
-- `/` — alias list with live search, delete action, and a create button
+- `/` — alias list with live search, delete and edit actions, and a create button
 - `/create` — form for new alias address and goto addresses
+- `/edit` — form for updating an existing alias's goto addresses
 - `/settings` — username and password management
 
 ## Configuration

@@ -39,8 +39,14 @@ var (
 	cellPattern      = regexp.MustCompile(`(?is)<t[dh][^>]*>(.*?)</t[dh]>`)
 	tagPattern       = regexp.MustCompile(`(?is)<[^>]+>`)
 
+	hiddenInputPattern      = regexp.MustCompile(`(?is)<input[^>]*name\s*=\s*["']address["'][^>]*>`)
+	hiddenInputValuePattern = regexp.MustCompile(`(?is)value\s*=\s*["']([^"']*)["']`)
+	textareaPattern         = regexp.MustCompile(`(?is)<textarea[^>]*name\s*=\s*["']goto["'][^>]*>(.*?)</textarea>`)
+	alertPattern            = regexp.MustCompile(`(?is)<div[^>]*id\s*=\s*["']alert-fade["'][^>]*class\s*=\s*["']alert alert-(success|danger)["'][^>]*>(.*?)</div>`)
+
 	ErrAliasInvalid      = errors.New("alias creation failed: access denied or invalid/incomplete data")
 	ErrAliasDeleteFailed = errors.New("alias deletion failed: access denied or invalid/incomplete data")
+	ErrAliasEditFailed   = errors.New("alias edit failed: access denied or invalid/incomplete data")
 )
 
 // Client holds one authenticated scraping session. Mailcow's session
@@ -269,6 +275,92 @@ func (c *Client) DeleteAlias(ctx context.Context, address string) error {
 	}
 
 	return nil
+}
+
+// GetAlias fetches the current edit form for a single alias and extracts its
+// destination addresses. The goto value returned is the raw comma-separated
+// string exactly as shown in the mailcow textarea.
+func (c *Client) GetAlias(ctx context.Context, address string) (*Alias, error) {
+	body, err := c.get(ctx, editAliasPath(address))
+	if err != nil {
+		return nil, fmt.Errorf("mailcow: fetching alias %q: %w", address, err)
+	}
+
+	if looksLikeLoginPage([]byte(body)) {
+		return nil, fmt.Errorf("mailcow: loading alias %q: session expired or not authenticated", address)
+	}
+
+	if msg, ok := extractAlertMessage(body, "danger"); ok {
+		return nil, fmt.Errorf("mailcow: loading alias %q: %s", address, msg)
+	}
+
+	hiddenMatch := hiddenInputPattern.FindString(body)
+	if hiddenMatch == "" {
+		return nil, fmt.Errorf("mailcow: alias %q edit form missing address field", address)
+	}
+
+	valueMatch := hiddenInputValuePattern.FindStringSubmatch(hiddenMatch)
+	if len(valueMatch) != 2 {
+		return nil, fmt.Errorf("mailcow: alias %q edit form address field has no value", address)
+	}
+	if valueMatch[1] != address {
+		return nil, fmt.Errorf("mailcow: alias form address mismatch: got %q, want %q", valueMatch[1], address)
+	}
+
+	textareaMatch := textareaPattern.FindStringSubmatch(body)
+	if len(textareaMatch) != 2 {
+		return nil, fmt.Errorf("mailcow: alias %q edit form missing goto field", address)
+	}
+
+	return &Alias{
+		Address: address,
+		Goto:    strings.TrimSpace(textareaMatch[1]),
+	}, nil
+}
+
+// EditAlias updates the destination addresses of an existing alias. The active
+// and SOGo visibility flags are left untouched.
+func (c *Client) EditAlias(ctx context.Context, address string, gotoAddresses []string) error {
+	form := url.Values{}
+	form.Set("trigger_mailbox_action", "editalias")
+	form.Set("address", address)
+	form.Set("goto", strings.Join(gotoAddresses, ","))
+	form.Set("active", "on")
+
+	body, err := c.postForm(ctx, editAliasPath(address), form)
+	if err != nil {
+		return fmt.Errorf("mailcow: editing alias %q: %w", address, err)
+	}
+
+	if msg, ok := extractAlertMessage(body, "success"); ok {
+		_ = msg
+		return nil
+	}
+
+	if msg, ok := extractAlertMessage(body, "danger"); ok {
+		return fmt.Errorf("mailcow: editing alias %q: %s", address, msg)
+	}
+
+	return fmt.Errorf("mailcow: editing alias %q: %w", address, ErrAliasEditFailed)
+}
+
+func extractAlertMessage(page, class string) (string, bool) {
+	matches := alertPattern.FindAllStringSubmatch(page, -1)
+	for _, m := range matches {
+		if len(m) != 3 {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(m[1]), class) {
+			return normalizeHTMLText(m[2]), true
+		}
+	}
+	return "", false
+}
+
+// editAliasPath returns the hosted mailcow edit path for an alias address.
+// The @ sign is encoded as %40 to match the browser's URL.
+func editAliasPath(address string) string {
+	return "/edit/alias/" + strings.ReplaceAll(address, "@", "%40")
 }
 
 // login performs the credential POST and verifies success deterministically:

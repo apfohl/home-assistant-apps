@@ -397,6 +397,16 @@
             appearance: none;
         }
 
+        .btn-edit {
+            color: var(--accent);
+            border-color: rgba(245, 197, 24, 0.35);
+        }
+
+        .btn-edit:hover {
+            background: rgba(245, 197, 24, 0.1);
+            border-color: var(--accent);
+        }
+
         .btn-delete {
             color: var(--error);
             border-color: rgba(224, 76, 76, 0.35);
@@ -543,6 +553,7 @@
                     </td>
                     <td data-label="Actions" class="right">
                         <div class="actions">
+                            <a class="btn btn-edit" href="{{$.IngressPath}}/edit?address={{.Address}}">Edit</a>
                             <form class="inline"
                                   method="POST"
                                   action="{{$.IngressPath}}/delete"

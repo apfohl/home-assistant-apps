@@ -10,7 +10,7 @@ WORKDIR /build
 COPY go.mod ./
 RUN go mod download
 
-COPY main.go client.go client_test.go dashboard.html create.html settings.html ./
+COPY main.go client.go client_test.go dashboard.html create.html edit.html settings.html ./
 RUN set -eu; \
     case "${BUILD_ARCH}" in \
         aarch64) export GOARCH=arm64 ;; \

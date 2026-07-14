@@ -33,6 +33,9 @@ var dashboardHTML string
 //go:embed create.html
 var createHTML string
 
+//go:embed edit.html
+var editHTML string
+
 //go:embed settings.html
 var settingsHTML string
 
@@ -47,7 +50,7 @@ const (
 	ingressIP       = "172.30.32.2"
 	listenAddr      = ":8080"
 	roleDomainAdmin = RoleDomainAdmin
-	version         = "1.1.0"
+	version         = "1.2.0"
 
 	prodSettingsPath = "/data/settings.json"
 	prodCookieFile   = "/data/mailcow-cookie-jar.json"
@@ -115,6 +118,15 @@ type aliasRow struct {
 
 // createPageData is passed into the create-alias template.
 type createPageData struct {
+	IngressPath string
+	Address     string
+	Goto        string
+	Error       string
+	Version     string
+}
+
+// editPageData is passed into the edit-alias template.
+type editPageData struct {
 	IngressPath string
 	Address     string
 	Goto        string
@@ -375,6 +387,109 @@ func renderCreate(w http.ResponseWriter, tmpl *template.Template, data createPag
 	}
 }
 
+func handleEdit(tmpl *template.Template, state *appState) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !state.enforceIngress(w, r) {
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			address := strings.TrimSpace(r.URL.Query().Get("address"))
+
+			data := editPageData{
+				IngressPath: ingressPath(r),
+				Address:     address,
+				Version:     version,
+			}
+
+			if address == "" {
+				data.Error = "Alias address must not be empty."
+				renderEdit(w, tmpl, data)
+				return
+			}
+
+			state.mu.RLock()
+			client := state.client
+			state.mu.RUnlock()
+
+			if client == nil {
+				data.Error = "Mailcow is not configured. Open Settings first."
+				renderEdit(w, tmpl, data)
+				return
+			}
+
+			alias, err := client.GetAlias(r.Context(), address)
+			if err != nil {
+				data.Error = fmt.Sprintf("Failed to load alias: %v", err)
+				renderEdit(w, tmpl, data)
+				return
+			}
+
+			data.Goto = alias.Goto
+			renderEdit(w, tmpl, data)
+
+		case http.MethodPost:
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, "bad request", http.StatusBadRequest)
+				return
+			}
+
+			address := strings.TrimSpace(r.FormValue("address"))
+			gotoStr := strings.TrimSpace(r.FormValue("goto"))
+
+			data := editPageData{
+				IngressPath: ingressPath(r),
+				Address:     address,
+				Goto:        gotoStr,
+				Version:     version,
+			}
+
+			if address == "" {
+				data.Error = "Alias address must not be empty."
+				renderEdit(w, tmpl, data)
+				return
+			}
+
+			gotoAddrs := splitGotoAddresses(gotoStr)
+			if len(gotoAddrs) == 0 {
+				data.Error = "At least one goto address must be provided."
+				renderEdit(w, tmpl, data)
+				return
+			}
+
+			state.mu.RLock()
+			client := state.client
+			state.mu.RUnlock()
+
+			if client == nil {
+				data.Error = "Mailcow is not configured. Open Settings first."
+				renderEdit(w, tmpl, data)
+				return
+			}
+
+			if err := client.EditAlias(r.Context(), address, gotoAddrs); err != nil {
+				data.Error = fmt.Sprintf("Failed to save alias: %v", err)
+				renderEdit(w, tmpl, data)
+				return
+			}
+
+			http.Redirect(w, r, ingressPath(r)+"/", http.StatusSeeOther)
+
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func renderEdit(w http.ResponseWriter, tmpl *template.Template, data editPageData) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	if err := tmpl.Execute(w, data); err != nil {
+		log.Printf("edit template error: %v", err)
+	}
+}
+
 func splitGotoAddresses(v string) []string {
 	parts := strings.Split(v, ",")
 	out := make([]string, 0, len(parts))
@@ -553,6 +668,11 @@ func main() {
 		log.Fatalf("parse create template: %v", err)
 	}
 
+	editTmpl, err := template.New("edit").Parse(editHTML)
+	if err != nil {
+		log.Fatalf("parse edit template: %v", err)
+	}
+
 	settingsTmpl, err := template.New("settings").Parse(settingsHTML)
 	if err != nil {
 		log.Fatalf("parse settings template: %v", err)
@@ -561,6 +681,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleDashboard(dashTmpl, state))
 	mux.HandleFunc("/create", handleCreate(createTmpl, state))
+	mux.HandleFunc("/edit", handleEdit(editTmpl, state))
 	mux.HandleFunc("/delete", handleDelete(state))
 	mux.HandleFunc("/settings", handleSettings(settingsTmpl, state, *settingsPath, *cookieFile))
 
