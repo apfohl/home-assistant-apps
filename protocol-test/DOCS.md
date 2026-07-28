@@ -22,9 +22,22 @@ It runs on the Home Assistant host network and binds to `127.0.0.1` by default, 
 
 > The `tls-terminated-tcp` Tailscale service **terminates TLS on the Tailscale side** and forwards plaintext TCP to the backend. That is why it must point at the plain TCP listener on port `8092`, not the TLS-wrapped listener on port `8093`. Port `8093` is only useful for direct local tests such as `openssl s_client -connect 127.0.0.1:8093`.
 
+## Prerequisites in the Tailscale admin console
+
+Before you can use the `https` or `tls-terminated-tcp` protocols, you must enable **MagicDNS** and **HTTPS certificates** for your tailnet:
+
+1. Open the [Tailscale admin console](https://login.tailscale.com/admin).
+2. Go to the **DNS** page.
+3. Enable **MagicDNS** if it is not already on.
+4. Under **HTTPS Certificates**, click **Enable HTTPS**.
+
+Without this, the Tailscale add-on will log `Tailscale's HTTPS support is disabled` and refuse to advertise any `https` or `tls-terminated-tcp` services.
+
+The Home Assistant device running the Tailscale add-on must also use a [tag-based identity](https://tailscale.com/docs/features/tags), because Tailscale Services cannot be hosted by user-authenticated devices.
+
 ## Configuring the Tailscale app
 
-After Protocol Test is running, configure the Tailscale add-on with the following `services` entries. The device must also carry a tag — see the Tailscale documentation for Services.
+After Protocol Test is running and the prerequisites above are met, configure the Tailscale add-on with the following `services` entries.
 
 ```yaml
 tags:
@@ -36,7 +49,7 @@ services:
     port: 80
     path: /
   - name: svc:https-test
-    target: https://127.0.0.1:8091
+    target: http://127.0.0.1:8090
     protocol: https
     port: 443
     path: /
@@ -50,9 +63,22 @@ services:
     port: 8443
 ```
 
-> If the Tailscale daemon rejects the self-signed HTTPS backend certificate on port `8091`, you can point the `https` service at `http://127.0.0.1:8090` instead. The local HTTPS listener on port `8091` remains available for direct tests.
+> The `https` service uses the plain HTTP backend on port `8090`. Tailscale still serves it with a real Tailscale TLS certificate, so clients see HTTPS. The local HTTPS listener on port `8091` is kept for direct testing only (e.g. `curl -k https://127.0.0.1:8091/`).
 
 After saving, approve the service host in the Tailscale admin console.
+
+## How `protocol` and `target` relate
+
+The Tailscale service `protocol` describes how the service is exposed **on the tailnet** (what the client sees). The `target` describes how Tailscale connects to the **local upstream** service. They are independent:
+
+| Tailscale `protocol` | Client sees | Allowed `target` schemes | What Tailscale does to the backend |
+|---|---|---|---|
+| `http` | `http://service.tailnet.ts.net` | `http://` | Forwards plain HTTP |
+| `https` | `https://service.tailnet.ts.net` | `http://` or `https://` | Terminates TLS at the edge, then forwards HTTP or HTTPS |
+| `tcp` | Raw TCP | `tcp://` | Forwards raw TCP unchanged |
+| `tls-terminated-tcp` | TLS over TCP | `tcp://` only | Terminates TLS at the edge, then forwards **plaintext TCP** |
+
+That is why the example above uses `protocol: https` with `target: http://127.0.0.1:8090`, and `protocol: tls-terminated-tcp` with `target: tcp://127.0.0.1:8092`.
 
 ## Testing the local listeners
 
@@ -141,13 +167,17 @@ The add-on can be reconfigured with these environment variables (all are optiona
 
 ## Troubleshooting
 
+**`Tailscale's HTTPS support is disabled`**
+
+You are trying to advertise an `https` or `tls-terminated-tcp` service, but MagicDNS and HTTPS certificates are not enabled for your tailnet. Enable them in the Tailscale admin console under **DNS → HTTPS Certificates**, then restart the Tailscale add-on.
+
 **Service not reachable**
 
 Make sure the Tailscale service host has been approved in the Tailscale admin console and that the Home Assistant device has a tag.
 
-**HTTPS backend rejected**
+**HTTPS service returns HTTP 502**
 
-If the Tailscale daemon cannot validate the self-signed backend certificate, change the `https` service target to `http://127.0.0.1:8090`. The `https` service will still be served with a Tailscale TLS certificate.
+You have the `https` service pointed at the self-signed HTTPS backend (`https://127.0.0.1:8091`). Tailscale’s HTTPS proxy cannot validate that certificate. Change the `https` service target to `http://127.0.0.1:8090` instead. Tailscale will still serve the service with a real TLS certificate, so the client sees HTTPS.
 
 **TLS-terminated TCP test fails**
 

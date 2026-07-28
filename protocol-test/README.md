@@ -29,6 +29,8 @@ A CLI client (`client/`) is included so you can verify all four protocols once t
 
 See [`DOCS.md`](DOCS.md) for the full Tailscale Services configuration and CLI client instructions.
 
+> **Important:** Before you can test the `https` or `tls-terminated-tcp` service protocols, you must enable **MagicDNS** and **HTTPS certificates** in your Tailscale admin console. Otherwise the Tailscale add-on will refuse to advertise those services.
+
 ## License
 
 MIT © 2026 Andreas Pfohl
