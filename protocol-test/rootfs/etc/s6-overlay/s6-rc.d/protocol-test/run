@@ -1,0 +1,6 @@
+#!/usr/bin/with-contenv bashio
+# ==============================================================================
+# Start the Protocol Test service
+# ==============================================================================
+bashio::log.info "Starting Protocol Test..."
+exec /usr/bin/protocol-test
