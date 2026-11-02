@@ -50,7 +50,7 @@ const (
 	ingressIP       = "172.30.32.2"
 	listenAddr      = ":8080"
 	roleDomainAdmin = RoleDomainAdmin
-	version         = "1.2.0"
+	version         = "1.2.1"
 
 	prodSettingsPath = "/data/settings.json"
 	prodCookieFile   = "/data/mailcow-cookie-jar.json"

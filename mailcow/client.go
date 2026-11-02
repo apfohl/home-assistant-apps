@@ -39,6 +39,8 @@ var (
 	cellPattern      = regexp.MustCompile(`(?is)<t[dh][^>]*>(.*?)</t[dh]>`)
 	tagPattern       = regexp.MustCompile(`(?is)<[^>]+>`)
 
+	inputPattern            = regexp.MustCompile(`(?is)<input\b[^>]*>`)
+	attributePattern        = regexp.MustCompile(`(?is)([a-zA-Z_:][a-zA-Z0-9_:.-]*)\s*=\s*["']([^"']*)["']`)
 	hiddenInputPattern      = regexp.MustCompile(`(?is)<input[^>]*name\s*=\s*["']address["'][^>]*>`)
 	hiddenInputValuePattern = regexp.MustCompile(`(?is)value\s*=\s*["']([^"']*)["']`)
 	textareaPattern         = regexp.MustCompile(`(?is)<textarea[^>]*name\s*=\s*["']goto["'][^>]*>(.*?)</textarea>`)
@@ -244,36 +246,38 @@ func (c *Client) CreateAlias(ctx context.Context, addresses, gotoAddresses []str
 		form.Set("active", "on")
 	}
 
-	body, err := c.postForm(ctx, "/add/alias", form)
+	body, err := c.postForm(ctx, "/add/alias", "/add/alias", form)
 	if err != nil {
 		return fmt.Errorf("mailcow: creating alias: %w", err)
 	}
 
-	if strings.Contains(body, "Zugriff verweigert oder unvollständige/ungültige Daten") {
+	if msg, ok := extractAlertMessage(body, "danger"); ok {
+		return fmt.Errorf("mailcow: creating alias: %s", msg)
+	}
+	if _, ok := extractAlertMessage(body, "success"); !ok {
 		return fmt.Errorf("mailcow: creating alias for %v: %w", addresses, ErrAliasInvalid)
 	}
-
 	return nil
 }
 
 // DeleteAlias removes a single mailbox alias.
-// The hosted mailcow UI treats deletion as an idempotent no-op for aliases
-// that do not exist, so this method returns nil as long as the request
-// succeeds.
+// It requires an explicit success message from the hosted UI.
 func (c *Client) DeleteAlias(ctx context.Context, address string) error {
 	form := url.Values{}
 	form.Set("trigger_mailbox_action", "deletealias")
 	form.Set("address", address)
 
-	body, err := c.postForm(ctx, "/manager", form)
+	body, err := c.postForm(ctx, "/delete/alias/"+url.PathEscape(address), "/manager", form)
 	if err != nil {
 		return fmt.Errorf("mailcow: deleting alias %q: %w", address, err)
 	}
 
-	if strings.Contains(body, "Zugriff verweigert oder unvollständige/ungültige Daten") {
+	if msg, ok := extractAlertMessage(body, "danger"); ok {
+		return fmt.Errorf("mailcow: deleting alias %q: %s", address, msg)
+	}
+	if _, ok := extractAlertMessage(body, "success"); !ok {
 		return fmt.Errorf("mailcow: deleting alias %q: %w", address, ErrAliasDeleteFailed)
 	}
-
 	return nil
 }
 
@@ -303,7 +307,7 @@ func (c *Client) GetAlias(ctx context.Context, address string) (*Alias, error) {
 	if len(valueMatch) != 2 {
 		return nil, fmt.Errorf("mailcow: alias %q edit form address field has no value", address)
 	}
-	if valueMatch[1] != address {
+	if html.UnescapeString(valueMatch[1]) != address {
 		return nil, fmt.Errorf("mailcow: alias form address mismatch: got %q, want %q", valueMatch[1], address)
 	}
 
@@ -314,7 +318,7 @@ func (c *Client) GetAlias(ctx context.Context, address string) (*Alias, error) {
 
 	return &Alias{
 		Address: address,
-		Goto:    strings.TrimSpace(textareaMatch[1]),
+		Goto:    strings.TrimSpace(html.UnescapeString(textareaMatch[1])),
 	}, nil
 }
 
@@ -325,9 +329,7 @@ func (c *Client) EditAlias(ctx context.Context, address string, gotoAddresses []
 	form.Set("trigger_mailbox_action", "editalias")
 	form.Set("address", address)
 	form.Set("goto", strings.Join(gotoAddresses, ","))
-	form.Set("active", "on")
-
-	body, err := c.postForm(ctx, editAliasPath(address), form)
+	body, err := c.postForm(ctx, editAliasPath(address), editAliasPath(address), form)
 	if err != nil {
 		return fmt.Errorf("mailcow: editing alias %q: %w", address, err)
 	}
@@ -360,7 +362,7 @@ func extractAlertMessage(page, class string) (string, bool) {
 // editAliasPath returns the hosted mailcow edit path for an alias address.
 // The @ sign is encoded as %40 to match the browser's URL.
 func editAliasPath(address string) string {
-	return "/edit/alias/" + strings.ReplaceAll(address, "@", "%40")
+	return "/edit/alias/" + url.PathEscape(address)
 }
 
 // login performs the credential POST and verifies success deterministically:
@@ -393,7 +395,26 @@ func (c *Client) login(ctx context.Context) error {
 }
 
 func (c *Client) loginWithRole(ctx context.Context, role Role) error {
+	loginReq, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+loginPath, nil)
+	if err != nil {
+		return fmt.Errorf("mailcow: building login page request: %w", err)
+	}
+	loginPage, err := c.httpClient.Do(loginReq)
+	if err != nil {
+		return fmt.Errorf("mailcow: fetching login page: %w", err)
+	}
+	loginBody, readErr := io.ReadAll(loginPage.Body)
+	_ = loginPage.Body.Close()
+	if readErr != nil {
+		return fmt.Errorf("mailcow: reading login page: %w", readErr)
+	}
+	if loginPage.StatusCode != http.StatusOK {
+		return fmt.Errorf("mailcow: login page returned status %d", loginPage.StatusCode)
+	}
 	form := url.Values{}
+	if token, ok := inputValue(string(loginBody), "csrf"); ok {
+		form.Set("csrf", token)
+	}
 	form.Set("fake_user[name]", "Autofill Prevent")
 	form.Set("login_user", c.username)
 	form.Set("pass_user", c.password)
@@ -767,11 +788,14 @@ func (c *Client) get(ctx context.Context, path string) (string, error) {
 		return "", fmt.Errorf("mailcow: reading response body for %s: %w", path, err)
 	}
 
+	if looksLikeLoginPage(body) {
+		return "", fmt.Errorf("mailcow: session expired while fetching %s", path)
+	}
 	return string(body), nil
 }
 
 // postForm submits an authenticated form POST and returns the response body.
-func (c *Client) postForm(ctx context.Context, path string, form url.Values) (string, error) {
+func (c *Client) postForm(ctx context.Context, formPath, path string, form url.Values) (string, error) {
 	if err := c.ensureSession(ctx); err != nil {
 		return "", err
 	}
@@ -779,6 +803,41 @@ func (c *Client) postForm(ctx context.Context, path string, form url.Values) (st
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	pageReq, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+formPath, nil)
+	if err != nil {
+		return "", fmt.Errorf("mailcow: building form request: %w", err)
+	}
+	pageResp, err := c.httpClient.Do(pageReq)
+	if err != nil {
+		return "", fmt.Errorf("mailcow: fetching form %s: %w", path, err)
+	}
+	pageBytes, readErr := io.ReadAll(pageResp.Body)
+	_ = pageResp.Body.Close()
+	if readErr != nil {
+		return "", fmt.Errorf("mailcow: reading form %s: %w", path, readErr)
+	}
+	if pageResp.StatusCode != http.StatusOK || looksLikeLoginPage(pageBytes) {
+		return "", fmt.Errorf("mailcow: form %s unavailable or session expired", path)
+	}
+	page := string(pageBytes)
+	token, ok := inputValue(page, "csrf")
+	if !ok || token == "" {
+		return "", fmt.Errorf("mailcow: form %s missing CSRF token", path)
+	}
+	form.Set("csrf", token)
+	if action := form.Get("trigger_mailbox_action"); action == "editalias" || action == "deletealias" {
+		address, ok := inputValue(page, "address")
+		if !ok || address != form.Get("address") {
+			return "", fmt.Errorf("mailcow: form address missing or does not match requested alias")
+		}
+	}
+	if form.Get("trigger_mailbox_action") == "editalias" {
+		for _, name := range []string{"active", "is_sogo_alias"} {
+			if checkboxChecked(page, name) {
+				form.Set(name, "on")
+			}
+		}
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+path, strings.NewReader(form.Encode()))
 	if err != nil {
 		return "", fmt.Errorf("mailcow: building POST request for %s: %w", path, err)
@@ -800,5 +859,35 @@ func (c *Client) postForm(ctx context.Context, path string, form url.Values) (st
 		return "", fmt.Errorf("mailcow: reading response body for POST %s: %w", path, err)
 	}
 
+	if looksLikeLoginPage(body) {
+		return "", fmt.Errorf("mailcow: session expired while submitting %s", path)
+	}
 	return string(body), nil
+}
+
+// inputValue extracts a named input independent of attribute order.
+func inputValue(page, name string) (string, bool) {
+	for _, input := range inputPattern.FindAllString(page, -1) {
+		attrs := inputAttributes(input)
+		if attrs["name"] == name {
+			value, ok := attrs["value"]
+			return value, ok
+		}
+	}
+	return "", false
+}
+func inputAttributes(input string) map[string]string {
+	attrs := map[string]string{}
+	for _, match := range attributePattern.FindAllStringSubmatch(input, -1) {
+		attrs[strings.ToLower(match[1])] = html.UnescapeString(match[2])
+	}
+	return attrs
+}
+func checkboxChecked(page, name string) bool {
+	for _, input := range inputPattern.FindAllString(page, -1) {
+		if inputAttributes(input)["name"] == name {
+			return regexp.MustCompile(`(?i)\bchecked(?:\s|=|/|>)`).MatchString(input)
+		}
+	}
+	return false
 }
