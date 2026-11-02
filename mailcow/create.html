@@ -178,7 +178,7 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            overflow: hidden;
+            overflow: visible;
         }
 
         .card-header {
@@ -187,6 +187,7 @@
             gap: 0.75rem;
             padding: 0.9rem 1.2rem;
             background: var(--surface2);
+            border-radius: var(--radius) var(--radius) 0 0;
             border-bottom: 1px solid var(--border);
         }
 
@@ -307,6 +308,18 @@
             .form-actions { flex-direction: column; }
             .form-actions .btn { justify-content: center; }
         }
+
+        .target-picker { position: relative; }
+        .target-input { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; padding: .35rem; }
+        .target-input:focus-within { border-color: var(--accent); }
+        .target-input input[type="text"] { flex: 1; width: auto; min-width: min(12rem, 100%); border: 0; outline: 0; box-shadow: none; padding: .35rem; }
+        .target-tag { display: inline-flex; align-items: center; gap: .4rem; max-width: 100%; background: #403719; color: #f7df87; border: 1px solid #786621; border-radius: 5px; padding: .2rem .45rem; overflow-wrap: anywhere; }
+        .target-tag button { flex: none; border: 0; background: transparent; color: #f7df87; cursor: pointer; font-size: 1.1rem; line-height: 1; }
+        .target-tag button:hover, .target-tag button:focus-visible { color: #fff; }
+        .target-options { position: absolute; z-index: 5; top: calc(100% + 4px); left: 0; right: 0; max-height: 12rem; overflow: auto; background: var(--surface2); color: var(--text); border: 1px solid #666; border-radius: 5px; box-shadow: 0 6px 16px #0009; padding: .25rem; }
+        .target-option { display: block; width: 100%; text-align: left; padding: .6rem .7rem; border: 0; border-radius: 3px; background: transparent; color: var(--text); font: inherit; overflow-wrap: anywhere; cursor: pointer; }
+        .target-option[hidden] { display: none; }
+        .target-option:hover, .target-option:focus-visible { background: #51451d; color: #fff2bd; outline: none; }
     </style>
 </head>
 <body>
@@ -348,10 +361,11 @@
             </div>
             <div class="field">
                 <label for="goto">Goto addresses</label>
-                <input type="text" id="goto" name="goto"
-                       value="{{.Goto}}"
-                       placeholder="user@example.com, other@example.com" required>
-                <span class="field-hint">One or more destination addresses, separated by commas.</span>
+                <div class="target-picker" id="target-picker">
+                    <div class="target-input" id="target-input"><input type="text" id="goto" name="goto" value="{{.Goto}}" placeholder="Add a target address" autocomplete="off" required aria-describedby="target-hint"></div>
+                    <div class="target-options" id="target-options" hidden>{{range .Targets}}<button type="button" class="target-option">{{.}}</button>{{end}}</div>
+                </div>
+                <span class="field-hint" id="target-hint">Choose suggestions or type an address and press Enter or comma. Remove a tag with its × button.</span>
             </div>
         </div>
     </div>
@@ -368,6 +382,41 @@
 </footer>
 
 <script>
+    (function () {
+        var picker = document.getElementById('target-picker'), box = document.getElementById('target-input');
+        var input = document.getElementById('goto'), options = document.getElementById('target-options');
+        var form = input.form, values = [];
+        var hidden = document.createElement('input'); hidden.type = 'hidden'; hidden.name = 'goto'; form.appendChild(hidden);
+        input.removeAttribute('name'); input.removeAttribute('required');
+        function sync() {
+            hidden.value = values.join(', ');
+            input.setCustomValidity(values.length || input.value.trim() ? '' : 'Add at least one target address.');
+            Array.from(options.children).forEach(function (option) {
+                option.hidden = values.includes(option.textContent.trim()) || !option.textContent.toLowerCase().includes(input.value.trim().toLowerCase());
+            });
+        }
+        function add(raw) {
+            raw.split(',').forEach(function (part) {
+                var value = part.trim(); if (!value || values.includes(value)) return;
+                values.push(value);
+                var tag = document.createElement('span'); tag.className = 'target-tag';
+                tag.appendChild(document.createTextNode(value));
+                var remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', 'Remove ' + value);
+                remove.addEventListener('click', function () { values = values.filter(function (v) { return v !== value; }); tag.remove(); sync(); input.focus(); });
+                tag.appendChild(remove); box.insertBefore(tag, input);
+            });
+            input.value = ''; sync();
+        }
+        add(input.value);
+        input.addEventListener('focus', function () { options.hidden = !options.children.length; sync(); });
+        input.addEventListener('input', sync);
+        input.addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ',') && input.value.trim()) { e.preventDefault(); add(input.value); } });
+        options.addEventListener('click', function (e) { if (e.target.classList.contains('target-option')) { add(e.target.textContent); input.focus(); } });
+        document.addEventListener('click', function (e) { if (!picker.contains(e.target)) options.hidden = true; });
+        form.addEventListener('submit', function () { add(input.value); });
+        sync();
+    })();
+
     (function () {
         var nav    = document.querySelector('.nav');
         var toggle = document.querySelector('.nav-toggle');

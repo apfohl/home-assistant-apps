@@ -1,5 +1,5 @@
 name: "Mailcow Alias Manager"
-version: "1.2.1"
+version: "1.3.0"
 slug: "mailcow"
 description: "Manage mailbox aliases on hosted mailcow through the web UI"
 url: "https://codeberg.org/apfohl/home-assistant-apps/src/branch/main/mailcow"

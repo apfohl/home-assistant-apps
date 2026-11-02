@@ -7,7 +7,7 @@ alternative access method is used.
 ## Features
 
 - List all mailbox aliases for the configured domain-admin account
-- Create new aliases with one or more comma-separated goto addresses
+- Create and edit aliases with selectable or custom target addresses
 - Delete aliases with a browser confirmation dialog
 - Search/filter aliases by alias address or goto addresses
 - All configuration is managed through the built-in settings page
@@ -24,7 +24,7 @@ The ingress-enabled dashboard on port 8080 provides:
 - `/` — alias list with live search, delete and edit actions, and a create button
 - `/create` — form for new alias address and goto addresses
 - `/edit` — form for updating an existing alias's goto addresses
-- `/settings` — username and password management
+- `/settings` — credentials and suggested target addresses
 
 ## Configuration
 
@@ -62,7 +62,8 @@ Both paths can be overridden with flags (see below).
 | Field | Description |
 |---|---|
 | `username` | Your hosted mailcow domain-admin username. |
-| `password` | Your hosted mailcow domain-admin password. |
+| `password` | Your hosted mailcow domain-admin password. Leave blank when saving to retain the current password. |
+| Suggested target addresses | Optional addresses, one per line, offered in the create and edit forms. Custom addresses remain allowed. |
 
 The login role is hardcoded to `domain_admin` and is not configurable.
 
@@ -78,7 +79,7 @@ The login role is hardcoded to `domain_admin` and is not configurable.
 1. Open the Mailcow dashboard.
 2. Click **Create alias**.
 3. Enter the alias address (e.g. `alias@example.com`).
-4. Enter one or more goto addresses separated by commas (e.g. `user@example.com, other@example.com`).
+4. Select suggested targets or type addresses and press Enter or comma. Remove targets with the × button.
 5. Submit the form. The new alias appears on the dashboard.
 
 New aliases are always created as active.
@@ -94,6 +95,17 @@ ENVIRONMENT=development go run .
 
 Then open http://localhost:8080/settings, enter your hosted mailcow
 credentials, and navigate to http://localhost:8080/ to manage aliases.
+
+To work without a real mailcow endpoint or credentials, start the in-memory mock:
+
+```bash
+ENVIRONMENT=development go run . -mock
+```
+
+Open http://localhost:8080/ and configure suggested targets under Settings.
+The mock starts with an example alias; changes to aliases are lost when the
+process stops. Settings are saved in `./dev-data/`. The `-mock` flag is
+available only in development mode.
 
 Credentials and session cookies are stored in `./dev-data/` by default. This
 directory is ignored by git.

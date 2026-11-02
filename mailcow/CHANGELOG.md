@@ -4,6 +4,17 @@ All notable changes to Mailcow Alias Manager will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.0] - 2026-11-02
+
+### Added
+
+- Configure suggested target addresses and select or enter targets as removable tags when creating or editing aliases
+- Run a standalone development server with an in-memory mock mailcow
+
+### Fixed
+
+- Keep the existing password when saving settings with a blank password field
+
 ## [1.2.1] - 2026-11-02
 
 ### Fixed

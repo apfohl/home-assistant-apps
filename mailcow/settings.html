@@ -337,7 +337,7 @@
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username"
                        value="{{.Username}}"
-                       placeholder="user@example.com" required>
+                       placeholder="user@example.com" {{if not .Mock}}required{{end}}>
                 <span class="field-hint">Your hosted mailcow domain-admin username.</span>
             </div>
             <div class="field">
@@ -346,6 +346,11 @@
                        placeholder="leave blank to keep current password"
                        autocomplete="new-password">
                 <span class="field-hint">Stored in <code>/data/settings.json</code> on the add-on's private volume.</span>
+            </div>
+            <div class="field">
+                <label for="targets">Suggested target addresses</label>
+                <textarea id="targets" name="targets" rows="4" placeholder="alice@example.com&#10;bob@example.com" style="width:100%;padding:.7rem;border:1px solid var(--border, #ccc);border-radius:6px;font:inherit">{{.Targets}}</textarea>
+                <span class="field-hint">One address per line. These are suggestions; other addresses can still be entered.</span>
             </div>
             <div class="field">
                 <label>Role</label>

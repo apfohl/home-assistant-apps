@@ -7,11 +7,12 @@ create, and delete aliases from the Home Assistant sidebar.
 ## Features
 
 - List all mailbox aliases
-- Create new aliases with one or more comma-separated goto addresses
+- Create new aliases with suggested or custom target addresses
 - Edit existing aliases to update their goto addresses
 - Delete aliases with a confirmation prompt
 - Search/filter aliases by alias address or goto addresses
-- Credentials managed through the built-in settings page
+- Credentials and suggested target addresses managed through the built-in settings page
+- Standalone development mode with an optional in-memory mock
 - Role fixed to `domain_admin`
 
 ## Supported architectures

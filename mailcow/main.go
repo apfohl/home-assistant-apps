@@ -50,7 +50,7 @@ const (
 	ingressIP       = "172.30.32.2"
 	listenAddr      = ":8080"
 	roleDomainAdmin = RoleDomainAdmin
-	version         = "1.2.1"
+	version         = "1.3.0"
 
 	prodSettingsPath = "/data/settings.json"
 	prodCookieFile   = "/data/mailcow-cookie-jar.json"
@@ -89,15 +89,25 @@ func defaultCookieFile(env environment) string {
 
 // settings holds the user-configurable credentials for hosted mailcow.
 type settings struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string   `json:"username"`
+	Password string   `json:"password"`
+	Targets  []string `json:"targets,omitempty"`
+}
+
+type aliasClient interface {
+	ListAliases(context.Context) ([]Alias, error)
+	GetAlias(context.Context, string) (*Alias, error)
+	CreateAlias(context.Context, []string, []string, bool) error
+	EditAlias(context.Context, string, []string) error
+	DeleteAlias(context.Context, string) error
 }
 
 // appState holds mutable runtime state.
 type appState struct {
 	mu       sync.RWMutex
 	settings *settings
-	client   *Client
+	client   aliasClient
+	mock     bool
 	env      environment
 }
 
@@ -121,6 +131,7 @@ type createPageData struct {
 	IngressPath string
 	Address     string
 	Goto        string
+	Targets     []string
 	Error       string
 	Version     string
 }
@@ -130,14 +141,17 @@ type editPageData struct {
 	IngressPath string
 	Address     string
 	Goto        string
+	Targets     []string
 	Error       string
 	Version     string
 }
 
 // settingsPageData is passed into the settings template.
 type settingsPageData struct {
+	Mock        bool
 	IngressPath string
 	Username    string
+	Targets     string
 	SaveError   string
 	SaveSuccess bool
 	Version     string
@@ -225,7 +239,13 @@ func (a *appState) applySettings(path, cookieFile string, s *settings) error {
 		return err
 	}
 
-	client, err := newMailcowClient(s, cookieFile)
+	var client aliasClient
+	var err error
+	if a.mock {
+		client = a.client
+	} else {
+		client, err = newMailcowClient(s, cookieFile)
+	}
 	if err != nil {
 		return fmt.Errorf("rebuild mailcow client: %w", err)
 	}
@@ -315,12 +335,17 @@ func handleCreate(tmpl *template.Template, state *appState) http.HandlerFunc {
 			return
 		}
 
+		state.mu.RLock()
+		targets := append([]string(nil), state.settings.Targets...)
+		state.mu.RUnlock()
+
 		switch r.Method {
 		case http.MethodGet:
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("Cache-Control", "no-store")
 			if err := tmpl.Execute(w, createPageData{
 				IngressPath: ingressPath(r),
+				Targets:     targets,
 				Version:     version,
 			}); err != nil {
 				log.Printf("create template error: %v", err)
@@ -337,6 +362,7 @@ func handleCreate(tmpl *template.Template, state *appState) http.HandlerFunc {
 
 			data := createPageData{
 				IngressPath: ingressPath(r),
+				Targets:     targets,
 				Address:     address,
 				Goto:        gotoStr,
 				Version:     version,
@@ -393,12 +419,17 @@ func handleEdit(tmpl *template.Template, state *appState) http.HandlerFunc {
 			return
 		}
 
+		state.mu.RLock()
+		targets := append([]string(nil), state.settings.Targets...)
+		state.mu.RUnlock()
+
 		switch r.Method {
 		case http.MethodGet:
 			address := strings.TrimSpace(r.URL.Query().Get("address"))
 
 			data := editPageData{
 				IngressPath: ingressPath(r),
+				Targets:     targets,
 				Address:     address,
 				Version:     version,
 			}
@@ -440,6 +471,7 @@ func handleEdit(tmpl *template.Template, state *appState) http.HandlerFunc {
 
 			data := editPageData{
 				IngressPath: ingressPath(r),
+				Targets:     targets,
 				Address:     address,
 				Goto:        gotoStr,
 				Version:     version,
@@ -552,11 +584,14 @@ func handleSettings(tmpl *template.Template, state *appState, settingsPath, cook
 		case http.MethodGet:
 			state.mu.RLock()
 			username := state.settings.Username
+			targets := strings.Join(state.settings.Targets, "\n")
 			state.mu.RUnlock()
 
 			renderSettings(w, tmpl, settingsPageData{
+				Mock:        state.mock,
 				IngressPath: ingressPath(r),
 				Username:    username,
+				Targets:     targets,
 				Version:     version,
 			})
 
@@ -568,19 +603,27 @@ func handleSettings(tmpl *template.Template, state *appState, settingsPath, cook
 
 			username := strings.TrimSpace(r.FormValue("username"))
 			password := r.FormValue("password")
+			targets := strings.TrimSpace(r.FormValue("targets"))
+			state.mu.RLock()
+			if password == "" {
+				password = state.settings.Password
+			}
+			state.mu.RUnlock()
 
 			data := settingsPageData{
+				Mock:        state.mock,
 				IngressPath: ingressPath(r),
 				Username:    username,
+				Targets:     targets,
 				Version:     version,
 			}
 
-			if username == "" {
+			if username == "" && !state.mock {
 				data.SaveError = "Username must not be empty."
 				renderSettings(w, tmpl, data)
 				return
 			}
-			if password == "" {
+			if password == "" && !state.mock {
 				data.SaveError = "Password must not be empty."
 				renderSettings(w, tmpl, data)
 				return
@@ -589,6 +632,7 @@ func handleSettings(tmpl *template.Template, state *appState, settingsPath, cook
 			newSettings := &settings{
 				Username: username,
 				Password: password,
+				Targets:  splitGotoAddresses(strings.ReplaceAll(targets, "\n", ",")),
 			}
 
 			if err := state.applySettings(settingsPath, cookieFile, newSettings); err != nil {
@@ -625,7 +669,11 @@ func main() {
 
 	settingsPath := flag.String("settings", defaultSettingsPath(env), "path to the Mailcow settings JSON file")
 	cookieFile := flag.String("cookie-file", defaultCookieFile(env), "path to the mailcow cookie jar file")
+	mock := flag.Bool("mock", false, "use an in-memory mock mailcow (development only)")
 	flag.Parse()
+	if *mock && env != envDevelopment {
+		log.Fatal("-mock requires ENVIRONMENT=development")
+	}
 
 	s, err := loadSettings(*settingsPath)
 	if err != nil {
@@ -634,15 +682,18 @@ func main() {
 
 	log.Printf("mailcow v%s starting in %s mode", version, env)
 
-	var client *Client
-	if s.Username != "" && s.Password != "" {
+	var client aliasClient
+	if *mock {
+		client = newMockClient()
+		log.Print("mailcow: using in-memory mock data")
+	} else if s.Username != "" && s.Password != "" {
 		client, err = newMailcowClient(s, *cookieFile)
 		if err != nil {
 			log.Fatalf("create mailcow client: %v", err)
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		if pingErr := client.Ping(ctx); pingErr != nil {
+		if pingErr := client.(*Client).Ping(ctx); pingErr != nil {
 			log.Printf("mailcow: initial login check failed: %v", pingErr)
 		} else {
 			log.Printf("mailcow: login check succeeded")
@@ -656,6 +707,7 @@ func main() {
 		settings: s,
 		client:   client,
 		env:      env,
+		mock:     *mock,
 	}
 
 	dashTmpl, err := template.New("dashboard").Parse(dashboardHTML)
